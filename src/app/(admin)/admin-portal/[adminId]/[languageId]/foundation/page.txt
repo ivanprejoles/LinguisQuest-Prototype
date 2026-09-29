@@ -1,0 +1,478 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DynamicActivityForm } from "@/components/global/foundation/DynamicActivityForm";
+import { AudioRecorder } from "@/components/global/foundation/SentenceBuilder/AudioRecorder";
+import { Plus, GripVertical, Trash2, ChevronRight, Layers, HelpCircle, ArrowRightLeft, PenTool, AlignLeft, Sparkles, Image as ImageIcon } from "lucide-react";
+
+export default function FoundationAdminDashboard() {
+  // Navigation Hierarchy State
+  const [activeLanguage, setActiveLanguage] = useState<any | null>(null);
+  const [activeRoadmap, setActiveRoadmap] = useState<any | null>(null);
+
+  // Data Collections
+  const [languages, setLanguages] = useState<any[]>([]);
+  const [roadmaps, setRoadmaps] = useState<any[]>([]);
+  const [stages, setStages] = useState<any[]>([]);
+
+  // Modal Dialog Forms State
+  const [langModal, setLangModal] = useState(false);
+  const [langName, setLangName] = useState("");
+  const [langCode, setLangCode] = useState("us");
+
+  const [roadmapModal, setRoadmapModal] = useState(false);
+  const [roadmapTitle, setRoadmapTitle] = useState("");
+  const [roadmapDesc, setRoadmapDesc] = useState("");
+  const [roadmapImage, setRoadmapImage] = useState<File | null>(null);
+
+  const [stageModal, setStageModal] = useState(false);
+  const [stageType, setStageType] = useState("multipleChoice");
+  const [stageQuestion, setStageQuestion] = useState("");
+  const [stagePayload, setStagePayload] = useState<any>({});
+  const [stageAudio, setStageAudio] = useState<File | null>(null);
+
+  // Drag-and-drop state
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  // Fetching Data Handlers
+  const fetchLanguages = async () => {
+    const res = await fetch("/api/admin/foundation/languages");
+    setLanguages(await res.json());
+  };
+
+  const fetchRoadmaps = async () => {
+    if (!activeLanguage) return;
+    const res = await fetch(`/api/admin/foundation/roadmaps?languageId=${activeLanguage.id}`);
+    setRoadmaps(await res.json());
+  };
+
+  const fetchStages = async () => {
+    if (!activeRoadmap) return;
+    const res = await fetch(`/api/admin/foundation/stages?roadmapId=${activeRoadmap.id}`);
+    setStages(await res.json());
+  };
+
+  useEffect(() => { fetchLanguages(); }, []);
+  useEffect(() => { if (activeLanguage) fetchRoadmaps(); }, [activeLanguage]);
+  useEffect(() => { if (activeRoadmap) fetchStages(); }, [activeRoadmap]);
+
+  // Create Handlers
+  const handleCreateLanguage = async () => {
+    if (!langName.trim()) return;
+    await fetch("/api/admin/foundation/languages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: langName, countryCode: langCode.toLowerCase() }),
+    });
+    setLangName("");
+    setLangModal(false);
+    fetchLanguages();
+  };
+
+  const handleCreateRoadmap = async () => {
+    if (!roadmapTitle.trim() || !activeLanguage) return;
+    let imageUrl = null;
+    let imageFileId = null;
+
+    if (roadmapImage) {
+      const formData = new FormData();
+      formData.append("file", roadmapImage);
+      const res = await fetch("/api/admin/foundation/upload", { method: "POST", body: formData });
+      const json = await res.json();
+      imageUrl = json.url;
+      imageFileId = json.fileId;
+    }
+
+    await fetch("/api/admin/foundation/roadmaps", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: roadmapTitle,
+        description: roadmapDesc,
+        languageId: activeLanguage.id,
+        imageUrl,
+        imageFileId,
+      }),
+    });
+
+    setRoadmapTitle("");
+    setRoadmapDesc("");
+    setRoadmapImage(null);
+    setRoadmapModal(false);
+    fetchRoadmaps();
+  };
+
+  const handleCreateStage = async () => {
+    if (!activeRoadmap) return;
+    let audioData: any = {};
+
+    if (stageAudio) {
+      const formData = new FormData();
+      formData.append("file", stageAudio);
+      const res = await fetch("/api/admin/foundation/upload", { method: "POST", body: formData });
+      const json = await res.json();
+      audioData.audioUrl = json.url;
+      audioData.audioFileId = json.fileId;
+    }
+
+    await fetch("/api/admin/foundation/stages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roadmapId: activeRoadmap.id,
+        type: stageType,
+        question: stageQuestion || "Complete the task",
+        ...stagePayload,
+        ...audioData,
+      }),
+    });
+
+    setStageModal(false);
+    setStageQuestion("");
+    setStageAudio(null);
+    fetchStages();
+  };
+
+  // Reordering Drag and Drop Logic
+  const handleDragSort = async (entity: "language" | "roadmap" | "stage", targetIdx: number) => {
+    if (draggedIdx === null || draggedIdx === targetIdx) return;
+
+    let items = entity === "language" ? [...languages] : entity === "roadmap" ? [...roadmaps] : [...stages];
+    const movedItem = items.splice(draggedIdx, 1)[0];
+    items.splice(targetIdx, 0, movedItem);
+
+    const reordered = items.map((item, idx) => ({ id: item.id, order: idx }));
+
+    if (entity === "language") setLanguages(items);
+    if (entity === "roadmap") setRoadmaps(items);
+    if (entity === "stage") setStages(items);
+
+    setDraggedIdx(null);
+
+    await fetch("/api/admin/foundation/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entity, items: reordered }),
+    });
+  };
+
+  // Delete Handlers
+  const handleDelete = async (entity: "language" | "roadmap" | "stage", id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Delete this ${entity}?`)) return;
+
+    await fetch(`/api/admin/foundation/${entity}s?id=${id}`, { method: "DELETE" });
+
+    if (entity === "language") fetchLanguages();
+    if (entity === "roadmap") fetchRoadmaps();
+    if (entity === "stage") fetchStages();
+  };
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6 font-sans">
+      {/* 1. Header & Dynamic Breadcrumbs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-green-500 fill-green-500" />
+            Foundation Admin
+          </h1>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  className="cursor-pointer font-bold text-slate-600 hover:text-green-600"
+                  onClick={() => { setActiveLanguage(null); setActiveRoadmap(null); }}
+                >
+                  Languages
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+
+              {activeLanguage && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      className="cursor-pointer font-bold text-slate-600 hover:text-green-600"
+                      onClick={() => setActiveRoadmap(null)}
+                    >
+                      {activeLanguage.name}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+
+              {activeRoadmap && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink className="font-bold text-slate-900">
+                      {activeRoadmap.title}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+        {/* Dynamic Context Action Buttons */}
+        <div>
+          {!activeLanguage && (
+            <Dialog open={langModal} onOpenChange={setLangModal}>
+              <DialogTrigger
+                render={
+                  <Button className="bg-green-500 hover:bg-green-600 text-white font-bold shadow-md">
+                    <Plus className="w-4 h-4 mr-1" /> Add Language
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader><DialogTitle>Add New Language</DialogTitle></DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <Input placeholder="Language Name (e.g. Japanese)" value={langName} onChange={(e) => setLangName(e.target.value)} />
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">ISO Country Code (2 letters)</label>
+                    <Input placeholder="e.g. jp, us, ph, es, fr" maxLength={2} value={langCode} onChange={(e) => setLangCode(e.target.value)} />
+                  </div>
+                  <Button onClick={handleCreateLanguage} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold">Save Language</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeLanguage && !activeRoadmap && (
+            <Dialog open={roadmapModal} onOpenChange={setRoadmapModal}>
+              <DialogTrigger
+                render={
+                  <Button className="bg-green-500 hover:bg-green-600 text-white font-bold shadow-md">
+                    <Plus className="w-4 h-4 mr-1" /> Add Lesson
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader><DialogTitle>Add Lesson to {activeLanguage.name}</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <Input placeholder="Lesson Title..." value={roadmapTitle} onChange={(e) => setRoadmapTitle(e.target.value)} />
+                  <Textarea placeholder="Short Description..." value={roadmapDesc} onChange={(e: any) => setRoadmapDesc(e.target.value)} />
+                  <div>
+                    <label className="text-xs font-semibold block mb-1">Illustration / Card Image</label>
+                    <Input type="file" accept="image/*" onChange={(e) => setRoadmapImage(e.target.files?.[0] || null)} />
+                  </div>
+                  <Button onClick={handleCreateRoadmap} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold">Save Lesson</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeRoadmap && (
+            <Dialog open={stageModal} onOpenChange={setStageModal}>
+              <DialogTrigger
+                render={
+                  <Button className="bg-green-500 hover:bg-green-600 text-white font-bold shadow-md">
+                    <Plus className="w-4 h-4 mr-1" /> Add Stage
+                  </Button>
+                }
+              />
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Configure Stage Level</DialogTitle></DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <Select value={stageType} onValueChange={(val) => setStageType(val ?? "multipleChoice")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="multipleChoice">Multiple Choice</SelectItem>
+                      <SelectItem value="matching">Matching Pairs</SelectItem>
+                      <SelectItem value="tracing">Canvas Tracing</SelectItem>
+                      <SelectItem value="sentenceBuilder">Sentence Builder</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Input placeholder="Question / Task Prompt..." value={stageQuestion} onChange={(e) => setStageQuestion(e.target.value)} />
+
+                  <AudioRecorder onAudioReady={setStageAudio} />
+
+                  <DynamicActivityForm type={stageType} onChange={setStagePayload} />
+
+                  <Button onClick={handleCreateStage} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold">Save Stage</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </div>
+
+      {/* 2. TIER 1: LANGUAGES VIEW (4-Column Game Grid) */}
+      {!activeLanguage && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {languages.map((lang, index) => (
+            <div
+              key={lang.id}
+              draggable
+              onDragStart={() => setDraggedIdx(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDragSort("language", index)}
+              onClick={() => setActiveLanguage(lang)}
+              className="cursor-pointer group relative bg-white border-2 border-slate-200 hover:border-green-500 rounded-2xl p-4 transition-all duration-150 shadow-[0_4px_0_0_#e2e8f0] active:translate-y-1 active:shadow-none flex items-center gap-3"
+            >
+              <GripVertical className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
+              <div className="w-12 h-12 rounded-full border-2 border-slate-100 shadow-inner overflow-hidden flex-shrink-0 bg-slate-50 flex items-center justify-center">
+                <img
+                  src={`https://flagcdn.com/w80/${lang.countryCode || "us"}.png`}
+                  alt={lang.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-grow min-w-0">
+                <h3 className="font-extrabold text-slate-800 text-base truncate">{lang.name}</h3>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Click to view lessons</span>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => handleDelete("language", lang.id, e)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 3. TIER 2: LESSONS VIEW (Duolingo Border-Notched Card Grid) */}
+      {activeLanguage && !activeRoadmap && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+          {roadmaps.map((rm, index) => (
+            <div
+              key={rm.id}
+              draggable
+              onDragStart={() => setDraggedIdx(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDragSort("roadmap", index)}
+              onClick={() => setActiveRoadmap(rm)}
+              className="cursor-pointer group relative bg-slate-50/50 border-2 border-slate-300 rounded-2xl p-5 pt-6 transition-all duration-150 shadow-[0_5px_0_0_#cbd5e1] hover:border-green-500 hover:shadow-[0_5px_0_0_#22c55e] active:translate-y-1 active:shadow-none flex flex-col justify-between min-h-[160px]"
+            >
+              {/* Notched Duolingo Title on Top Border */}
+              <div className="absolute -top-3.5 left-4 bg-white px-3 py-0.5 border-2 border-slate-300 rounded-lg group-hover:border-green-500">
+                <h4 className="font-black text-slate-800 text-sm tracking-tight">{rm.title}</h4>
+              </div>
+
+              {/* Card Body */}
+              <div className="pr-16 space-y-1 mt-1">
+                <p className="text-xs font-semibold text-slate-500 leading-relaxed line-clamp-3">
+                  {rm.description || "No description provided."}
+                </p>
+              </div>
+
+              {/* Bottom Right Illustration Anchor */}
+              <div className="absolute bottom-3 right-3 w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden">
+                {rm.imageUrl ? (
+                  <img src={rm.imageUrl} alt={rm.title} className="w-full h-full object-contain" />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-300" />
+                )}
+              </div>
+
+              {/* Drag & Action Bar */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200/60 mt-2">
+                <div className="flex items-center gap-1 text-slate-400 group-hover:text-green-600 font-bold text-[11px]">
+                  <span>Manage Stages</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleDelete("roadmap", rm.id, e)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 4. TIER 3: STAGES VIEW (Top-to-Bottom Auto-Numbered Stack) */}
+      {activeRoadmap && (
+        <div className="max-w-2xl mx-auto space-y-3">
+          {stages.map((stg, index) => {
+            const levelNum = index + 1;
+
+            const getTypeBadge = (type: string) => {
+              switch (type) {
+                case "multipleChoice":
+                  return { label: "Multiple Choice", icon: HelpCircle, color: "bg-blue-100 text-blue-700 border-blue-200" };
+                case "matching":
+                  return { label: "Matching Pairs", icon: ArrowRightLeft, color: "bg-purple-100 text-purple-700 border-purple-200" };
+                case "tracing":
+                  return { label: "Canvas Tracing", icon: PenTool, color: "bg-amber-100 text-amber-700 border-amber-200" };
+                case "sentenceBuilder":
+                  return { label: "Sentence Builder", icon: AlignLeft, color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+                default:
+                  return { label: type, icon: Layers, color: "bg-slate-100 text-slate-700 border-slate-200" };
+              }
+            };
+
+            const badge = getTypeBadge(stg.type);
+            const Icon = badge.icon;
+
+            return (
+              <div
+                key={stg.id}
+                draggable
+                onDragStart={() => setDraggedIdx(index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDragSort("stage", index)}
+                className="group relative bg-white border-2 border-slate-200 hover:border-green-500 rounded-2xl p-4 shadow-[0_4px_0_0_#e2e8f0] transition-all duration-150 flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3">
+                  <GripVertical className="w-5 h-5 text-slate-300 cursor-grab opacity-50 group-hover:opacity-100" />
+                  
+                  {/* Dynamic Level Counter Badge */}
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-black text-base flex items-center justify-center shadow-sm">
+                    {levelNum}
+                  </div>
+
+                  {/* Stage Details */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1 ${badge.color}`}>
+                        <Icon className="w-3 h-3" />
+                        {badge.label}
+                      </span>
+                      {stg.audioUrl && (
+                        <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                          🎙️ Audio
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-extrabold text-slate-800 text-sm leading-none">
+                      {stg.question}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleDelete("stage", stg.id, e)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

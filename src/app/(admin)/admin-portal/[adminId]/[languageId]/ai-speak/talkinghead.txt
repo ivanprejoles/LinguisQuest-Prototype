@@ -1,0 +1,295 @@
+// app/api/conversation/route.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+export async function POST(req: Request) {
+  try {
+    const { userText, targetLanguage = "English" } = await req.json();
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: { responseMimeType: "application/json" },
+    });
+
+    const prompt = `
+      You are "Lingo", a friendly conversational language tutor.
+      User said: "${userText}"
+      Target Language: ${targetLanguage}
+
+      Guidelines:
+      - Respond naturally in 1-2 concise sentences.
+      - Pick an emotion/mood for the avatar from: "neutral", "happy", "angry", "sad", "fear", "disgust", "love", "sleepy".
+
+      Return JSON strictly using this format:
+      {
+        "aiResponseText": "Response in target language",
+        "emotion": "happy"
+      }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const data = JSON.parse(result.response.text());
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Gemini Route Error:", error);
+    return NextResponse.json({ error: "Failed to generate AI response" }, { status: 500 });
+  }
+}
+
+
+
+
+//AvatarViewer.tsx
+"use client";
+
+import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+
+export interface AvatarViewerRef {
+  speak: (text: string, mood?: string) => Promise<void>;
+  setMood: (mood: string) => void;
+}
+
+interface AvatarViewerProps {
+  onAvatarReady?: () => void;
+}
+
+export const AvatarViewer = forwardRef<AvatarViewerRef, AvatarViewerProps>(
+  ({ onAvatarReady }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const headRef = useRef<any>(null);
+
+    useEffect(() => {
+      let isMounted = true;
+
+      async function initAvatar() {
+        if (!containerRef.current) return;
+
+        // Dynamically import TalkingHead to prevent Next.js SSR build errors
+        const { TalkingHead } = await import("talkinghead");
+
+        if (!isMounted) return;
+
+        // 1. Initialize TalkingHead instance
+        // Note: TalkingHead uses Google Cloud TTS by default for speech & visemes
+        const head = new TalkingHead(containerRef.current, {
+          ttsEndpoint: "https://texttospeech.googleapis.com/v1/text:synthesize",
+          cameraView: "upper", // "full", "upper", "head"
+        });
+
+        headRef.current = head;
+
+        try {
+          // 2. Load 3D Avatar (GLB format with ARKit/Oculus blend shapes like Ready Player Me)
+          await head.showAvatar({
+            url: "/models/character.glb", // Place GLB in public/models/
+            body: "M",
+            avatarMood: "neutral",
+            ttsLang: "en-US",
+            ttsVoice: "en-US-Standard-A",
+            lipsyncLang: "en",
+          });
+
+          if (onAvatarReady) onAvatarReady();
+        } catch (err) {
+          console.error("Failed to load TalkingHead avatar:", err);
+        }
+      }
+
+      initAvatar();
+
+      return () => {
+        isMounted = false;
+        if (headRef.current) {
+          try {
+            headRef.current.stop();
+          } catch (e) {
+            // cleanup
+          }
+        }
+      };
+    }, [onAvatarReady]);
+
+    // Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+      speak: async (text: string, mood?: string) => {
+        if (!headRef.current) return;
+        if (mood) {
+          headRef.current.setMood(mood);
+        }
+        // TalkingHead handles audio synthesis, mouth keyframes, and speech timing
+        await headRef.current.speakText(text);
+      },
+      setMood: (mood: string) => {
+        if (headRef.current) {
+          headRef.current.setMood(mood);
+        }
+      },
+    }));
+
+    return (
+      <div
+        ref={containerRef}
+        className="w-full h-[350px] bg-slate-900 rounded-3xl overflow-hidden shadow-xl border border-slate-800 relative"
+      />
+    );
+  }
+);
+
+AvatarViewer.displayName = "AvatarViewer";
+
+
+
+
+//page
+"use client";
+
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { Mic, MicOff, Loader2 } from "lucide-react";
+import type { AvatarViewerRef } from "./AvatarViewer";
+
+// SSR disabled wrapper for TalkingHead client component
+const AvatarViewer = dynamic(
+  () => import("./AvatarViewer").then((mod) => mod.AvatarViewer),
+  { ssr: false }
+);
+
+export default function TalkingHeadConversationPage() {
+  const [isListening, setIsListening] = useState(false);
+  const [transcriptText, setTranscriptText] = useState("");
+  const [status, setStatus] = useState("Loading 3D Avatar...");
+  const [isAvatarReady, setIsAvatarReady] = useState(false);
+
+  const recognitionRef = useRef<any>(null);
+  const avatarRef = useRef<AvatarViewerRef | null>(null);
+  const latestTranscriptRef = useRef("");
+
+  // Process User Input with Gemini & Speak with Avatar
+  const processUserMessage = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+
+    setStatus("Lingo is thinking...");
+    avatarRef.current?.setMood("sleepy"); // Thinking expression
+
+    try {
+      const res = await fetch("/api/conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userText: text, targetLanguage: "English" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed AI response");
+
+      setStatus("Lingo is speaking...");
+      
+      // Pass response and emotion directly into TalkingHead avatar
+      if (avatarRef.current) {
+        await avatarRef.current.speak(data.aiResponseText, data.emotion || "happy");
+      }
+
+      setStatus("Tap mic to speak");
+      avatarRef.current?.setMood("neutral");
+    } catch (err) {
+      console.error(err);
+      setStatus("Error processing request");
+      avatarRef.current?.setMood("neutral");
+    }
+  }, []);
+
+  // Web Speech API STT setup
+  useEffect(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onresult = (event: any) => {
+        const text = Array.from(event.results)
+          .map((result: any) => result[0][0].transcript)
+          .join("");
+        setTranscriptText(text);
+        latestTranscriptRef.current = text;
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (latestTranscriptRef.current.trim()) {
+          processUserMessage(latestTranscriptRef.current);
+        }
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, [processUserMessage]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current || !isAvatarReady) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setTranscriptText("");
+      latestTranscriptRef.current = "";
+      recognitionRef.current.start();
+      setIsListening(true);
+      setStatus("Listening...");
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen max-w-md mx-auto bg-slate-950 text-white p-4 justify-between">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="font-black text-sky-400 text-lg tracking-wide">TALKINGHEAD AI</h1>
+        <p className="text-xs text-slate-400 font-medium">{status}</p>
+      </div>
+
+      {/* TalkingHead 3D Canvas */}
+      <AvatarViewer
+        ref={avatarRef}
+        onAvatarReady={() => {
+          setIsAvatarReady(true);
+          setStatus("Tap mic to speak");
+        }}
+      />
+
+      {/* Speech Feedback Box */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 min-h-[70px] flex items-center justify-center text-center">
+        <p className="text-sm font-semibold text-slate-300">
+          {transcriptText || <span className="text-slate-500 italic">Your speech will appear here...</span>}
+        </p>
+      </div>
+
+      {/* Mic Button */}
+      <div className="flex justify-center pb-4">
+        <button
+          onClick={toggleListening}
+          disabled={!isAvatarReady}
+          className={`w-20 h-20 rounded-full flex items-center justify-center font-bold text-white transition-all shadow-lg ${
+            !isAvatarReady
+              ? "bg-slate-700 cursor-not-allowed opacity-50"
+              : isListening
+              ? "bg-red-500 scale-105 animate-pulse shadow-red-500/30"
+              : "bg-sky-500 hover:bg-sky-400 shadow-sky-500/30"
+          }`}
+        >
+          {!isAvatarReady ? (
+            <Loader2 className="w-8 h-8 animate-spin" />
+          ) : isListening ? (
+            <MicOff className="w-8 h-8" />
+          ) : (
+            <Mic className="w-8 h-8" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,119 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// FOUNDATION
+
+model Language {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  countryCode   String   @default("us") // ISO 2-letter code (e.g., 'es', 'fr', 'ph', 'us')
+  voiceLanguage String   @default("en-US") // BCP-47 language tag for TTS (e.g., 'es-ES', 'fr-FR', 'tl-PH')
+  order         Int      @default(0)
+  roadmaps      Roadmap[]
+  workspaceSessions WorkspaceSession[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+} 
+
+model Roadmap {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  imageUrl    String?
+  imageFileId String?
+  order       Int      @default(0)
+  languageId  String   @db.ObjectId
+  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  stages      Stage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([languageId])
+}
+
+model Stage {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String   // "multipleChoice" | "matching" | "tracing" | "sentenceBuilder" | "fillInTheBlank" | "tapWhatYouHear"
+  order       Int      @default(0)
+  
+  // Shared metadata common to all stages (useful for database querying/filtering)
+  question    String   @default("") 
+
+  // Structured BSON document storing the specific ActivityPayload
+  payload     Json     
+
+  roadmapId   String   @db.ObjectId
+  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([roadmapId])
+}
+
+
+// NOVEL
+
+model WorkspaceSession {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  nodes     Json              
+  updatedAt DateTime         @updatedAt
+
+  // RELATION: Connects to Language parent
+  languageId String   @db.ObjectId
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  // RELATION: Connects to your newly separated collection
+  assets    AssetReference[]
+  graphNodes     GraphNode[]
+}
+
+// Turned from a 'type' into a full 'model' (collection)
+model AssetReference {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  fileId    String   @unique // Essential for atomic lookups/renaming
+  name      String
+  rowType   String   
+  url       String
+  timestamp Float
+
+  // RELATION LINK: Connects back to your parent session
+  sessionId String           @db.ObjectId
+  session   WorkspaceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // INDEX: Speeds up canvas asset loading filters
+  @@index([sessionId])
+}
+
+type Choice {
+  text         String @default("")
+  targetNodeId String @default("")
+}
+
+model GraphNode {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  nodeId         String           // The client-side ID string (e.g., node.id)
+  title          String           @default("New Node")
+  type           String           @default("normal") 
+  bgImage        String           @default("")
+  characterImage String           @default("")
+  bgMusic        String           @default("") // 🎵 Added from component properties
+  sfx            String           @default("") // 💥 Added from component properties
+  dialogue       String[]
+  x              Int              @default(0)  // Managed via Math.round (Int)
+  y              Int              @default(0)  // Managed via Math.round (Int)
+  choices        Choice[]
+
+  // RELATION LINKS
+  sessionId      String           @db.ObjectId
+  session        WorkspaceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, nodeId])   
+  @@index([sessionId])
+}

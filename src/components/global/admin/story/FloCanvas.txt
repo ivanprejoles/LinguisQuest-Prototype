@@ -1,0 +1,244 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { ScenarioNodeBox } from './ScenarioNodeBox';
+import { useNodeStore } from '@/store/novel/useNodeStore';
+import { useAssetStore } from '@/store/novel/useAssetStore';
+
+interface DraggingConnection {
+  sourceNodeId: string;
+  choiceIndex: number;
+  // Canvas coordinate frame metrics
+  currentX: number;
+  currentY: number;
+}
+
+interface FlowCanvasProps {
+  pan: { x: number; y: number };
+  zoom: number;
+  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseUp: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+}
+
+export default function FlowCanvas({
+  pan,
+  zoom,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onWheel
+}: FlowCanvasProps) {
+  const nodes = useNodeStore((state) => state.nodes);
+  const updateNodeLocally = useNodeStore((state) => state.updateNodeLocally);
+  const deleteNodeLocally = useNodeStore((state) => state.deleteNodeLocally);
+  const selectedNodeId = useNodeStore((state) => state.selectedNodeId);
+  const setSelectedNodeId = useNodeStore((state) => state.setSelectedNodeId);
+  const assets = useAssetStore((state) => state.assets);
+
+  const [activeDrag, setActiveDrag] = useState<DraggingConnection | null>(null);
+  // Track continuous frame rerenders for moving node updates
+  const [, setTick] = useState(0);
+
+  // 🛡️ Track if we are safely executing on the client browser
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleStartConnectionDrag = (sourceNodeId: string, choiceIndex: number, startCanvasX: number, startCanvasY: number) => {
+    // Translate client workspace elements into raw canvas tracking bounds coordinates
+    const trueCanvasX = (startCanvasX - pan.x) / zoom;
+    const trueCanvasY = (startCanvasY - pan.y) / zoom;
+    setActiveDrag({ sourceNodeId, choiceIndex, currentX: trueCanvasX, currentY: trueCanvasY });
+  };
+
+  const handleCompleteConnectionDrag = (targetNodeId: string) => {
+    if (!activeDrag || activeDrag.sourceNodeId === targetNodeId) return;
+
+    const sourceNode = nodes[activeDrag.sourceNodeId];
+    if (sourceNode) {
+      const updatedChoices = [...sourceNode.choices];
+      updatedChoices[activeDrag.choiceIndex] = {
+        ...updatedChoices[activeDrag.choiceIndex],
+        targetNodeId: targetNodeId
+      };
+      updateNodeLocally(activeDrag.sourceNodeId, { choices: updatedChoices });
+    }
+    setActiveDrag(null);
+  };
+
+  useEffect(() => {
+    if (!activeDrag) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      const canvasContainer = document.getElementById('flow-canvas-container');
+      if (!canvasContainer) return;
+
+      const rect = canvasContainer.getBoundingClientRect();
+      const currentCanvasX = (e.clientX - rect.left - pan.x) / zoom;
+      const currentCanvasY = (e.clientY - rect.top - pan.y) / zoom;
+
+      setActiveDrag(prev => prev ? { ...prev, currentX: currentCanvasX, currentY: currentCanvasY } : null);
+    };
+
+    const handleGlobalMouseUp = () => {
+      setTimeout(() => setActiveDrag(null), 50);
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [activeDrag, pan, zoom]);
+
+  // Keep path curves connected during live nodes translation drags
+  useEffect(() => {
+    const handleNodeMoveSync = () => setTick(t => t + 1);
+    window.addEventListener('mousemove', handleNodeMoveSync);
+    return () => window.removeEventListener('mousemove', handleNodeMoveSync);
+  }, []);
+
+  const renderConnections = () => {
+    const lines: React.ReactNode[] = [];
+    
+    if (!isMounted || typeof window === 'undefined') return lines;
+
+    const canvasContainer = document.getElementById('flow-canvas-container');
+    if (!canvasContainer) return lines;
+    
+    const canvasRect = canvasContainer.getBoundingClientRect();
+
+    // 🌟 Asymmetric Node-Editor Curve Logic
+    const calculateAsymmetricCurve = (startX: number, startY: number, endX: number, endY: number) => {
+      const deltaX = endX - startX;
+      
+      // Control point 1: Pulls horizontally out to the right from the option pin dot.
+      // If the target node is behind it (to the left), we push the loop further right to give it room.
+      const horizontalHandleStrength = deltaX > 0 
+        ? Math.max(deltaX * 0.6, 60) 
+        : Math.max(Math.abs(deltaX) * 0.5, 140);
+
+      const cp1X = startX + horizontalHandleStrength;
+      const cp1Y = startY;
+
+      // Control point 2: Keeps the line entering straight vertically into the top target pin.
+      // Setting cp2X exactly to endX eliminates any right-to-left curve at the endpoint.
+      const cp2X = endX;
+      // Pull the handle up slightly to control the vertical entry speed/angle.
+      const cp2Y = endY - Math.max(Math.abs(endY - startY) * 0.3, 40);
+
+      return `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
+    };
+
+    // 1. Permanent Canvas Connections Loop
+    Object.values(nodes).forEach((sourceNode) => {
+      if (!sourceNode.choices) return;
+      
+      sourceNode.choices.forEach((choice, idx) => {
+        const targetNode = nodes[choice.targetNodeId];
+        if (!targetNode) return;
+
+        const sourcePinEl = document.querySelector(`[data-pin-source="${sourceNode.id}-${idx}"]`);
+        const targetPinEl = document.querySelector(`[data-pin-target="${choice.targetNodeId}"]`);
+
+        let startX = sourceNode.x + 288;
+        let startY = sourceNode.y + 220;
+        let endX = targetNode.x + 144;
+        let endY = targetNode.y;
+
+        if (sourcePinEl && targetPinEl) {
+          const sRect = sourcePinEl.getBoundingClientRect();
+          const tRect = targetPinEl.getBoundingClientRect();
+
+          startX = (sRect.left + (sRect.width / 2) - canvasRect.left - pan.x) / zoom;
+          startY = (sRect.top + (sRect.height / 2) - canvasRect.top - pan.y) / zoom;
+          endX = (tRect.left + (tRect.width / 2) - canvasRect.left - pan.x) / zoom;
+          endY = (tRect.top + (tRect.height / 2) - canvasRect.top - pan.y) / zoom;
+        }
+
+        lines.push(
+          <path
+            key={`${sourceNode.id}-link-${idx}`}
+            d={calculateAsymmetricCurve(startX, startY, endX, endY)}
+            fill="none"
+            stroke="#6366f1"
+            strokeWidth="2.5"
+            strokeDasharray="4 2"
+            strokeLinecap="round"
+          />
+        );
+      });
+    });
+
+    // 2. Real-time Active Interacting Wire Trace Line
+    if (activeDrag) {
+      const sourcePinEl = document.querySelector(`[data-pin-source="${activeDrag.sourceNodeId}-${activeDrag.choiceIndex}"]`);
+      let startX = activeDrag.currentX - 50;
+      let startY = activeDrag.currentY;
+
+      if (sourcePinEl) {
+        const sRect = sourcePinEl.getBoundingClientRect();
+        startX = (sRect.left + (sRect.width / 2) - canvasRect.left - pan.x) / zoom;
+        startY = (sRect.top + (sRect.height / 2) - canvasRect.top - pan.y) / zoom;
+      }
+
+      lines.push(
+        <path
+          key="active-live-wire"
+          d={calculateAsymmetricCurve(startX, startY, activeDrag.currentX, activeDrag.currentY)}
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      );
+    }
+
+    return lines;
+  };
+
+  return (
+    <div
+      id="flow-canvas-container"
+      className="w-full h-full relative overflow-hidden bg-[#0c1020] cursor-grab active:cursor-grabbing select-none"
+      onWheel={onWheel}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+    >
+      <div
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: 'top left',
+        }}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <svg className="absolute inset-0 w-[5000px] h-[5000px] overflow-visible pointer-events-none">
+          {renderConnections()}
+        </svg>
+
+        <div className="absolute inset-0 pointer-events-auto">
+          {Object.values(nodes).map((node) => (
+            <ScenarioNodeBox
+              key={node.id}
+              node={node}
+              isSelected={selectedNodeId === node.id}
+              onSelect={setSelectedNodeId}
+              onUpdate={updateNodeLocally}
+              onRemove={deleteNodeLocally}
+              dbAssets={assets}
+              isDraggingConnection={activeDrag !== null && activeDrag.sourceNodeId !== node.id}
+              onStartDragConnection={handleStartConnectionDrag}
+              onCompleteDragConnection={handleCompleteConnectionDrag}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

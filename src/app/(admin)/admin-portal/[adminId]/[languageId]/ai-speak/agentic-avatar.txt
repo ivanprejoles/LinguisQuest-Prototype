@@ -1,0 +1,88 @@
+// app/api/deepgram-key/route.ts
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const apiKey = process.env.DEEPGRAM_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "Deepgram API Key not set" }, { status: 500 });
+  }
+
+  return NextResponse.json({ apiKey });
+}
+
+
+
+
+"use client";
+
+import React from "react";
+import { DeepgramAvatarAgent } from "agentic-avatars/deepgram";
+import { Jane } from "agentic-avatars"; // Built-in R3F avatar models: Jane, Fiona, Sam
+import type { DeepgramTool } from "agentic-avatars";
+
+// 1. Define your system prompt for Gemini
+const systemPrompt = `
+# ROLE
+You are Lingo, a friendly conversational language tutor.
+
+# INSTRUCTIONS
+- Answer concisely in 1-2 natural sentences.
+- Speak clearly and help the user practice languages.
+- When the user says goodbye or wants to finish, say "this is the end" to close the session.
+`;
+
+// 2. (Optional) Define tools Gemini can call autonomously
+const tools: DeepgramTool[] = [
+  {
+    name: "update_user_progress",
+    description: "Saves the user's progress score or records a weak grammar area.",
+    parameters: {
+      type: "object",
+      properties: {
+        topic: { type: "string", description: "The grammar/vocabulary topic" },
+        score: { type: "number", description: "Performance score out of 100" },
+      },
+      required: ["topic", "score"],
+    },
+    // Handler executed when Gemini triggers the tool call
+    handler: async ({ topic, score }) => {
+      console.log(`[Agentic Tool Executed] Saved progress for ${topic}: ${score}`);
+      // Return a string response back to Gemini's context
+      return `Successfully recorded score of ${score} for ${topic}.`;
+    },
+  },
+];
+
+export default function GeminiAvatarPage() {
+  // Fetch API key securely from your Next.js backend endpoint
+  const getApiKey = async (): Promise<string> => {
+    const res = await fetch("/api/deepgram-key");
+    const data = await res.json();
+    return data.apiKey;
+  };
+
+  return (
+    <div className="w-full h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-2xl h-[500px] rounded-3xl overflow-hidden border border-slate-800 relative shadow-2xl">
+        <DeepgramAvatarAgent
+          getApiKey={getApiKey}
+          avatarComponent={Jane} // Pass Jane, Fiona, or Sam from agentic-avatars
+          systemPrompt={systemPrompt}
+          // Configure Gemini as the LLM provider
+          llm={{
+            provider: "google",
+            model: "gemini-2.5-flash", // or gemini-1.5-flash / gemini-2.0-flash depending on availability
+          }}
+          voice="aura-2-thalia-en" // Deepgram TTS model
+          sttModel="nova-3" // Deepgram STT model
+          tools={tools}
+          endSessionPhrase="this is the end"
+          onSessionEnd={() => {
+            console.log("Conversation session ended.");
+          }}
+        />
+      </div>
+    </div>
+  );
+}

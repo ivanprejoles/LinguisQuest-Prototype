@@ -1,0 +1,326 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Sparkles, Plus } from "lucide-react";
+
+import { LanguageModal } from "@/components/global/admin/foundation/modals/LanguageModal";
+import { RoadmapModal } from "@/components/global/admin/foundation/modals/RoadmapModal";
+import { StageModal } from "@/components/global/admin/foundation/modals/StageModal";
+import { LanguagesGrid } from "@/components/global/admin/foundation/grids/LanguagesGrid";
+import { RoadmapsGrid } from "@/components/global/admin/foundation/grids/RoadmapsGrid";
+import { StagesStack } from "@/components/global/admin/foundation/grids/StagesStack";
+import { useFoundationStore } from "@/store/foundation/useFoundationStore";
+import { Stage } from "@/types/foundation/stage";
+import { Language, Roadmap } from "@prisma/client";
+
+export default function FoundationAdminDashboard() {
+  const {
+    activeLanguage,
+    activeRoadmap,
+    languages,
+    roadmaps,
+    stages,
+    setActiveLanguage,
+    setActiveRoadmap,
+    setLanguages,
+    setRoadmaps,
+    setStages,
+  } = useFoundationStore();
+
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  // Modal Control States
+  const [langModal, setLangModal] = useState(false);
+  const [roadmapModal, setRoadmapModal] = useState(false);
+  const [stageModal, setStageModal] = useState(false);
+
+  // Editing Item Tracking States
+  const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
+  const [editingRoadmap, setEditingRoadmap] = useState<Roadmap | null>(null);
+  const [editingStage, setEditingStage] = useState<Stage | null>(null);
+
+  const fetchLanguages = async () => {
+    const res = await fetch("/api/admin/foundation/languages");
+    setLanguages(await res.json());
+  };
+
+  const fetchRoadmaps = async () => {
+    if (!activeLanguage) return;
+    const res = await fetch(
+      `/api/admin/foundation/roadmaps?languageId=${activeLanguage.id}`
+    );
+    setRoadmaps(await res.json());
+  };
+
+  const fetchStages = async () => {
+    if (!activeRoadmap) return;
+    const res = await fetch(
+      `/api/admin/foundation/stages?roadmapId=${activeRoadmap.id}`
+    );
+    setStages(await res.json());
+  };
+
+  useEffect(() => {
+    fetchLanguages();
+  }, []);
+
+  useEffect(() => {
+    if (activeLanguage) fetchRoadmaps();
+  }, [activeLanguage]);
+
+  useEffect(() => {
+    if (activeRoadmap) fetchStages();
+  }, [activeRoadmap]);
+
+  const handleDragSort = async (
+    entity: "language" | "roadmap" | "stage",
+    targetIdx: number
+  ) => {
+    if (draggedIdx === null || draggedIdx === targetIdx) return;
+    let items: any =
+      entity === "language"
+        ? [...languages]
+        : entity === "roadmap"
+        ? [...roadmaps]
+        : [...stages];
+    const movedItem: any = items.splice(draggedIdx, 1)[0];
+    items.splice(targetIdx, 0, movedItem);
+
+    const reordered = items.map((item: any, idx: number) => ({
+      id: item.id,
+      order: idx,
+    }));
+    if (entity === "language") setLanguages(items);
+    if (entity === "roadmap") setRoadmaps(items);
+    if (entity === "stage") setStages(items);
+
+    setDraggedIdx(null);
+    await fetch("/api/admin/foundation/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entity, items: reordered }),
+    });
+  };
+
+  const handleDelete = async (
+    entity: "language" | "roadmap" | "stage",
+    id: string,
+    e?: React.MouseEvent
+  ) => {
+    e?.stopPropagation();
+    if (!confirm(`Delete this ${entity}?`)) return;
+    await fetch(`/api/admin/foundation/${entity}s?id=${id}`, { method: "DELETE" });
+
+    if (entity === "language") fetchLanguages();
+    if (entity === "roadmap") fetchRoadmaps();
+    if (entity === "stage") fetchStages();
+  };
+
+  // Language Handlers
+  const handleOpenAddLanguage = () => {
+    setEditingLanguage(null);
+    setLangModal(true);
+  };
+
+  const handleOpenEditLanguage = (language: Language, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingLanguage(language);
+    setLangModal(true);
+  };
+
+  // Roadmap Handlers
+  const handleOpenAddRoadmap = () => {
+    setEditingRoadmap(null);
+    setRoadmapModal(true);
+  };
+
+  const handleOpenEditRoadmap = (roadmap: Roadmap, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingRoadmap(roadmap);
+    setRoadmapModal(true);
+  };
+
+  // Stage Handlers
+  const handleOpenAddStage = () => {
+    setEditingStage(null);
+    setStageModal(true);
+  };
+
+  const handleOpenEditStage = (stage: Stage, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingStage(stage);
+    setStageModal(true);
+  };
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6 font-sans">
+      {/* Header & Breadcrumbs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-green-500 fill-green-500" />
+            Foundation Admin
+          </h1>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  className="cursor-pointer font-bold text-slate-600 hover:text-green-600"
+                  onClick={() => {
+                    setActiveLanguage(null);
+                    setActiveRoadmap(null);
+                  }}
+                >
+                  Languages
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+
+              {activeLanguage && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      className="cursor-pointer font-bold text-slate-600 hover:text-green-600"
+                      onClick={() => setActiveRoadmap(null)}
+                    >
+                      {activeLanguage.name || "Roadmaps"}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+
+              {activeRoadmap && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="font-bold text-slate-900">
+                      {activeRoadmap.title || "Stages"}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              )}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+        {/* Action Header Modals & Buttons */}
+        <div>
+          {!activeLanguage && (
+            <button
+              onClick={handleOpenAddLanguage}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Language
+            </button>
+          )}
+
+          {activeLanguage && !activeRoadmap && (
+            <button
+              onClick={handleOpenAddRoadmap}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Roadmap
+            </button>
+          )}
+
+          {activeRoadmap && (
+            <button
+              onClick={handleOpenAddStage}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Stage
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <main>
+        {!activeLanguage && (
+          <LanguagesGrid
+            languages={languages}
+            onSelect={setActiveLanguage}
+            onEdit={handleOpenEditLanguage}
+            onDelete={(id: string, e: React.MouseEvent) =>
+              handleDelete("language", id, e)
+            }
+            onDragStart={setDraggedIdx}
+            onDrop={(idx: number) => handleDragSort("language", idx)}
+          />
+        )}
+
+        {activeLanguage && !activeRoadmap && (
+          <RoadmapsGrid
+            roadmaps={roadmaps}
+            onSelect={setActiveRoadmap}
+            onEdit={handleOpenEditRoadmap}
+            onDelete={(id: string, e: React.MouseEvent) =>
+              handleDelete("roadmap", id, e)
+            }
+            onDragStart={setDraggedIdx}
+            onDrop={(idx: number) => handleDragSort("roadmap", idx)}
+          />
+        )}
+
+        {activeRoadmap && (
+          <StagesStack
+            stages={stages as unknown as Stage[]}
+            onDelete={(id: string, e?: React.MouseEvent) =>
+              handleDelete("stage", id, e)
+            }
+            onEdit={handleOpenEditStage}
+            onRefresh={fetchStages}
+            onDragStart={setDraggedIdx}
+            onDrop={(idx: number) => handleDragSort("stage", idx)}
+          />
+        )}
+      </main>
+
+      {/* Modals */}
+      {langModal && (
+        <LanguageModal
+          isOpen={langModal}
+          onClose={() => {
+            setLangModal(false);
+            setEditingLanguage(null);
+          }}
+          languageToEdit={editingLanguage}
+          onSuccess={fetchLanguages}
+        />
+      )}
+
+      {roadmapModal && (
+        <RoadmapModal
+          isOpen={roadmapModal}
+          onClose={() => {
+            setRoadmapModal(false);
+            setEditingRoadmap(null);
+          }}
+          roadmapToEdit={editingRoadmap}
+          onSuccess={fetchRoadmaps}
+        />
+      )}
+
+      {stageModal && activeRoadmap && (
+        <StageModal
+          isOpen={stageModal}
+          roadmapId={activeRoadmap.id}
+          stageToEdit={editingStage}
+          onClose={() => {
+            setStageModal(false);
+            setEditingStage(null);
+          }}
+          onSuccess={fetchStages}
+        />
+      )}
+    </div>
+  );
+}

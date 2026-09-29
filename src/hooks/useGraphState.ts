@@ -1,6 +1,6 @@
 // src/hooks/useGraphState.ts
 import { useState } from 'react';
-import { GraphState, ScenarioNode, RoutePathType } from '@/types/scenario';
+import { GraphState, ScenarioNode, RoutePathType } from '@/types/novel/scenario';
 
 export function useGraphState() {
   const [nodes, setNodes] = useState<GraphState>({

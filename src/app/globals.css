@@ -7,9 +7,26 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  
+  /* FONTS: Nunito (Body/Sans) & Fredoka (Headings/Display) */
+  --font-sans: var(--font-nunito), sans-serif;
+  --font-heading: var(--font-fredoka), sans-serif;
+  --font-display: var(--font-fredoka), sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+
+  /* GAMIFIED COLOR PALETTE */
+  --color-quest-green: #58cc02;
+  --color-quest-green-dark: #46a302;
+  --color-quest-blue: #1cb0f6;
+  --color-quest-blue-dark: #1899d6;
+  --color-quest-yellow: #ffc800;
+  --color-quest-yellow-dark: #e5b400;
+  --color-quest-purple: #ce82ff;
+  --color-quest-purple-dark: #a855f7;
+  --color-quest-red: #ff4b4b;
+  --color-quest-red-dark: #ea2b2b;
+
+  /* SHADCN TOKENS */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -126,5 +143,12 @@
   }
   html {
     @apply font-sans;
+  }
+  .thin-scrollbar {
+    @apply [&::-webkit-scrollbar]:w-1.5 
+           [&::-webkit-scrollbar-track]:bg-[#05070f] 
+           [&::-webkit-scrollbar-thumb]:bg-[#2a3754] 
+           [&::-webkit-scrollbar-thumb]:rounded-full 
+           hover:[&::-webkit-scrollbar-thumb]:bg-indigo-500;
   }
 }
