@@ -56,10 +56,10 @@ export default async function AdminPortalLayout({
   ];
 
   return (
-    <div className="h-screen w-full flex flex-col bg-white font-sans overflow-hidden">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-white font-sans">
       {/* Header Bar */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-        <div className="max-Faiw-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <header className="relative z-50 w-full shrink-0 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           {/* ================= LEFT: Rectangular Logo Container ================= */}
           <div className="flex items-center shrink-0">
@@ -128,7 +128,7 @@ export default async function AdminPortalLayout({
       </header>
 
       {/* Main Container */}
-      <main className="w-full flex-1 flex flex-col">{children}</main>
+      <main className="flex w-full flex-1 min-h-0 min-w-0 flex-col overflow-hidden">{children}</main>
     </div>
   );
 }

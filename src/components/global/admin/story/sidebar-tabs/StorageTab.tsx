@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAssetStore } from '@/store/story/useAssetStore';
+import { useParams } from 'next/navigation';
 
 interface StorageTabProps {
   sessionId: string;
@@ -40,6 +41,8 @@ interface DialogConfig {
 }
 
 export default function StorageTab({ sessionId }: StorageTabProps) {
+  const { languageId } = useParams<{ languageId: string }>();
+  
   const {
     assets,
     fetchAssets,
@@ -98,7 +101,13 @@ export default function StorageTab({ sessionId }: StorageTabProps) {
       setActiveCategoryUploading(targetType);
       const cleanName = inputValue?.trim() || targetFile.name;
       const fileWithCustomName = new File([targetFile], cleanName, { type: targetFile.type });
-      const success = await addAsset(fileWithCustomName, sessionId, targetType, cleanName);
+      const success = await addAsset(
+        fileWithCustomName, 
+        sessionId, 
+        targetType, 
+        cleanName,
+        languageId
+      );
       if (!success) alert("Failed to upload asset.");
       setActiveCategoryUploading(null);
     }

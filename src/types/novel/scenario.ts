@@ -25,12 +25,26 @@ export interface GraphState {
   [key: string]: ScenarioNode;
 }
 
-// w-50 aspect-9/16 max-h-100px
 
-// full view
-// const modalViewportSizing: Record<PlatformViewport, string> = {
-//   mobile: 'w-[320px] h-[95%] max-h-[580px] border-x-8 border-t-[24px] border-b-[24px] border-slate-800 rounded-[2rem]',
-//   desktop: 'w-[90%] max-w-5xl aspect-[16/9] max-h-[100%] border-4 border-slate-800 rounded-xl'
-// };
+export interface StorySceneChoice {
+  text: string;
+  targetNodeId: string;
+}
 
-// <DialogContent className=" min-w-[90vw]  h-[90vh]  bg-[#090d16] border-[#161f38] text-slate-100 p-0 flex flex-col focus:outline-none overflow-hidden gap-0">
+export interface StoryScene {
+  nodeId: string;
+  title: string;
+  type: string;
+  bgImage: string;
+  characterImage: string;
+  bgMusic: string;
+  sfx: string;
+  dialogue: string[];
+  choices: StorySceneChoice[];
+}
+
+export interface StoryGraphResponse {
+  id: string;
+  title: string | null;
+  graphNodes: StoryScene[];
+}

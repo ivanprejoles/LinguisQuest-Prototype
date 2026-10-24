@@ -43,6 +43,7 @@ export function MatchingPairs({
     targetId: string;
   } | null>(null);
 
+  console.log(payload)
   const rawPairs: MatchingPairItem[] = useMemo(() => payload?.pairs || [], [payload]);
 
   // Generate scrambled left (source) and right (target) banks

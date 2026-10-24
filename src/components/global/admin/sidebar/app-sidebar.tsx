@@ -1,119 +1,97 @@
-"use client"
+// "use client"
 
-import * as React from "react"
-import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react"
+// import * as React from "react"
+// import {
+//   House,
+//   Languages,
+//   Trophy,
+//   ShieldCheck,
+//   ShoppingBag,
+//   UserRound,
+//   Ellipsis,
+// } from "lucide-react"
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar"
-import { NavMain } from "./nav-main"
-import { NavProjects } from "./nav-projects"
-import { NavUser } from "./nav-user"
+// import {
+//   Sidebar,
+//   SidebarContent,
+//   SidebarFooter,
+//   SidebarHeader,
+//   SidebarMenu,
+//   SidebarMenuButton,
+//   SidebarMenuItem,
+//   SidebarRail,
+// } from "@/components/ui/sidebar"
+// import { NavMain } from "./nav-main"
+// import { NavProjects } from "./nav-projects"
+// import { NavUser } from "./nav-user"
+// import Image from "next/image"
 
-const data = {
-  user: {
-    name: "Admin User",
-    email: "admin@example.com",
-    avatar: "/avatars/admin.jpg",
-  },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        { title: "History", url: "#" },
-        { title: "Starred", url: "#" },
-        { title: "Settings", url: "#" },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        { title: "Genesis", url: "#" },
-        { title: "Explorer", url: "#" },
-        { title: "Quantum", url: "#" },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        { title: "Introduction", url: "#" },
-        { title: "Get Started", url: "#" },
-        { title: "Tutorials", url: "#" },
-        { title: "Changelog", url: "#" },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        { title: "General", url: "#" },
-        { title: "Team", url: "#" },
-        { title: "Billing", url: "#" },
-        { title: "Limits", url: "#" },
-      ],
-    },
-  ],
-  projects: [
-    { name: "Design Engineering", url: "#", icon: Frame },
-    { name: "Sales & Marketing", url: "#", icon: PieChart },
-    { name: "Travel", url: "#", icon: Map },
-  ],
-}
+// const navMainTabs = [
+//   {
+//     title: "Learn",
+//     url: "/learn",
+//     icon: House,
+//   },
+//   {
+//     title: "Languages",
+//     url: "/languages",
+//     icon: Languages,
+//   },
+//   {
+//     title: "Leaderboards",
+//     url: "/leaderboards",
+//     icon: Trophy,
+//   },
+//   {
+//     title: "Quests",
+//     url: "/quests",
+//     icon: ShieldCheck,
+//   },
+//   {
+//     title: "Shop",
+//     url: "/shop",
+//     icon: ShoppingBag,
+//   },
+//   {
+//     title: "Profile",
+//     url: "/profile",
+//     icon: UserRound,
+//   },
+//   {
+//     title: "More",
+//     url: "/more",
+//     icon: Ellipsis,
+//   },
+// ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        {/* <TeamSwitcher teams={data.teams} /> */}
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  )
-}
+// export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+//   return (
+//     <Sidebar collapsible="offcanvas" {...props}>
+//       <SidebarHeader>
+//         <SidebarMenu>
+//           <SidebarMenuItem>
+//             <SidebarMenuButton
+//               className="data-[slot=sidebar-menu-button]:p-1.5!"
+//               render={(
+//               <a href="/">
+//                 <Image
+//                   src="/LinguisQuest-title.png"
+//                   alt="LinguisQuest Logo"
+//                   width={160}
+//                   height={40}
+//                   priority
+//                   className="h-14 w-auto object-contain"
+//                 />
+//               </a>
+//               )}
+//             />
+//           </SidebarMenuItem>
+//         </SidebarMenu>
+//       </SidebarHeader>
+//       <SidebarContent>
+//         <NavMain items={navMainTabs} />
+//       </SidebarContent>
+//       <SidebarRail />
+//     </Sidebar>
+//   )
+// }

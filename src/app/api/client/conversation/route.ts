@@ -1,41 +1,24 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import {prisma} from "@/lib/prisma";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const { userText, targetLanguage } = await req.json();
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: { responseMimeType: "application/json" },
+    const topics = await prisma.conversationTopic.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+      },
     });
 
-    const prompt = `
-      You are "Lingo", a friendly language tutor.
-      User said: "${userText}"
-      Target Language: ${targetLanguage} (e.g., Tagalog, English, French).
-
-      Guidelines:
-      - Respond in 1-2 simple sentences appropriate for a conversation.
-      - Keep the response encouraging, polite, and completely free of toxic/bad language.
-      - Always end with a simple follow-up question.
-
-      Return JSON strictly using this format:
-      {
-        "aiResponseText": "The response text in the target language",
-        "englishTranslation": "English translation of the response",
-        "emotion": "happy | encouraging | thinking | surprised | neutral"
-      }
-    `;
-
-    const result = await model.generateContent(prompt);
-    const data = JSON.parse(result.response.text());
-
-    return NextResponse.json(data);
+    return NextResponse.json({ topics });
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return NextResponse.json({ error: "Failed to process speech" }, { status: 500 });
+    console.error("Failed to fetch conversation topics:", error);
+
+    return NextResponse.json(
+      { error: "Failed to fetch conversation topics" },
+      { status: 500 }
+    );
   }
 }

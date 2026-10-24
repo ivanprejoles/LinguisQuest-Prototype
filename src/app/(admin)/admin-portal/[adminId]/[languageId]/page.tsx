@@ -63,7 +63,7 @@ export default function LanguageHubPage({
       shadowColor: "shadow-[0_8px_0_0_#6b21a8]",
       icon: Bot,
       stats: { primary: "Interactive", secondary: "Voice Enabled" },
-      href: `/admin-portal/${adminId}/${languageId}/ai-speak`,
+      href: `/admin-portal/${adminId}/${languageId}/conversation`,
       btnText: "Configure Agent",
       btnBg: "bg-purple-600 hover:bg-purple-700 text-white shadow-[0_4px_0_0_#6b21a8]",
     },

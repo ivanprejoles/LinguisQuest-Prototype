@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -10,19 +11,24 @@ export function UserMenu() {
     setMounted(true);
   }, []);
 
+  if (!mounted) {
+    return (
+      <div className="h-10 w-10 animate-pulse rounded-full bg-slate-700" />
+    );
+  }
+
   return (
-    <div className="flex items-center p-0.5 rounded-2xl ring-2 ring-emerald-500/20 hover:ring-emerald-500/50 transition min-h-[40px] min-w-[40px]">
-      {mounted ? (
-        <UserButton
-          appearance={{
-            elements: {
-              avatarBox: "h-9 w-9 rounded-xl",
-            },
-          }}
-        />
-      ) : (
-        <div className="h-9 w-9 rounded-xl bg-slate-200 animate-pulse" />
-      )}
-    </div>
+    <UserButton
+      appearance={{
+        elements: {
+          userButtonBox: "!h-10 !w-10",
+          userButtonTrigger:
+            "!h-10 !w-10 !rounded-full !p-0 ring-2 ring-cyan-400/60 hover:ring-cyan-300",
+          userButtonAvatarBox: "!h-10 !w-10 !rounded-full",
+          userButtonAvatarImage:
+            "!h-full !w-full !rounded-full object-cover",
+        },
+      }}
+    />
   );
 }

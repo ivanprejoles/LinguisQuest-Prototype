@@ -41,6 +41,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import QueryProvider from "@/providers/query-provider";
 import { cn } from "@/lib/utils";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 // Bold, rounded heading font for titles, XP counters, and quest buttons
 const fredoka = Fredoka({
@@ -81,6 +82,7 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans tracking-wide">
           <QueryProvider>{children}</QueryProvider>
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

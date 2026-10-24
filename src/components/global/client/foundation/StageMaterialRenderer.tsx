@@ -37,7 +37,7 @@ export interface StageRoadmap {
 export interface StageData {
   id: string;
   type: ActivityType;
-  order?: number;
+  order: number;
   payload: ActivityPayload;
   roadmapId?: string;
   roadmap?: StageRoadmap;
