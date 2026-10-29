@@ -24,6 +24,7 @@ model User {
   lastHeartRefillAt DateTime @default(now()) // Timestamp anchor for 4-hour heart regeneration
 
   stageScores       UserStageScore[]
+  storyProgress UserStoryProgress[]
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -122,6 +123,7 @@ model WorkspaceSession {
 
   assets      AssetReference[]
   graphNodes  GraphNode[]
+  userProgress UserStoryProgress[]
 }
 
 // Turned from a 'type' into a full 'model' (collection)
@@ -167,6 +169,24 @@ model GraphNode {
   @@unique([sessionId, nodeId])   
   @@index([sessionId])
 }
+
+
+model UserStoryProgress {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  sessionId     String   @db.ObjectId
+  currentNodeId String
+  winCount      Int      @default(0)
+  lossCount     Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session WorkspaceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([sessionId])
+}
+
 
 model ConversationTopic {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId

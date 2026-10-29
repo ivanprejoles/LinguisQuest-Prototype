@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +27,11 @@ import {
   Check,
   Puzzle,
 } from "lucide-react";
-import { Stage } from "@/types/foundation/stage";
-import { ActivityPayload, ActivityType } from "@/types/foundation/materials";
+import type { Stage } from "@/types/foundation/stage";
+import type {
+  ActivityPayload,
+  ActivityType,
+} from "@/types/foundation/materials";
 
 interface StageModalProps {
   isOpen: boolean;
@@ -82,6 +85,27 @@ const ACTIVITY_TYPES = [
   },
 ];
 
+async function readErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const data = await response.json();
+
+    if (typeof data?.error === "string") {
+      return data.error;
+    }
+
+    if (typeof data?.message === "string") {
+      return data.message;
+    }
+  } catch {
+    // The server may return a non-JSON error response.
+  }
+
+  return fallback;
+}
+
 export function StageModal({
   isOpen,
   roadmapId,
@@ -91,71 +115,121 @@ export function StageModal({
   const queryClient = useQueryClient();
   const isEditing = Boolean(stageToEdit?.id);
 
+  const submitLockRef = useRef(false);
+
   const [type, setType] = useState("sentenceBuilder");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setType(stageToEdit?.type || "sentenceBuilder");
-      setErrorMessage(null);
-    }
+    if (!isOpen) return;
+
+    setType(stageToEdit?.type || "sentenceBuilder");
+    setErrorMessage(null);
+    setPopoverOpen(false);
   }, [isOpen, stageToEdit]);
 
-  const saveMutation = useMutation({
-    mutationFn: async (payload: ActivityPayload) => {
+  const saveMutation = useMutation<void, Error, ActivityPayload>({
+    mutationFn: async (payload) => {
       const formData = new FormData();
       formData.append("roadmapId", roadmapId);
 
-      const rawPayload = { ...payload } as Record<string, unknown>;
-      delete rawPayload.isValid;
+      const rawPayload = {
+        ...payload,
+      } as Record<string, unknown>;
 
-      const rawAudioFile = rawPayload.audioFile || rawPayload.mainAudio;
+      delete rawPayload.isValid;
+      delete rawPayload.error;
+
+      // Attach the main audio file, if present.
+      const rawAudioFile =
+        rawPayload.audioFile || rawPayload.mainAudio;
+
       if (rawAudioFile instanceof File) {
         formData.append("audioFile", rawAudioFile);
       }
+
       delete rawPayload.audioFile;
       delete rawPayload.mainAudio;
 
-      if (type === "multipleChoice" && Array.isArray(rawPayload.options)) {
+      // Attach multiple-choice images separately.
+      if (
+        type === "multipleChoice" &&
+        Array.isArray(rawPayload.options)
+      ) {
         rawPayload.options = rawPayload.options.map(
-          (opt: Record<string, unknown>, index: number) => {
-            const { imageFile, ...restOption } = opt;
-            if (imageFile instanceof File) {
-              formData.append(`option_image_${index}`, imageFile);
+          (option: unknown, index: number) => {
+            if (
+              !option ||
+              typeof option !== "object" ||
+              Array.isArray(option)
+            ) {
+              return option;
             }
+
+            const {
+              imageFile,
+              ...restOption
+            } = option as Record<string, unknown>;
+
+            if (imageFile instanceof File) {
+              formData.append(
+                `option_image_${index}`,
+                imageFile,
+              );
+            }
+
             return restOption;
-          }
+          },
         );
       }
 
-      formData.append("payload", JSON.stringify({ type, ...rawPayload }));
+      // Ensure the currently selected activity type is submitted.
+      formData.append(
+        "payload",
+        JSON.stringify({
+          ...rawPayload,
+          type,
+        }),
+      );
 
       const endpoint =
         isEditing && stageToEdit
-          ? `/api/admin/foundation/stages?id=${stageToEdit.id}`
+          ? `/api/admin/foundation/stages?id=${encodeURIComponent(stageToEdit.id)}`
           : "/api/admin/foundation/stages";
 
-      const res = await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: isEditing ? "PUT" : "POST",
         body: formData,
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
+      if (!response.ok) {
         throw new Error(
-          errData.error || `Failed to ${isEditing ? "update" : "save"} stage level`
+          await readErrorMessage(
+            response,
+            `Failed to ${isEditing ? "update" : "save"} stage level.`,
+          ),
         );
       }
-
-      return res.json();
     },
+
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stages", roadmapId] });
+      // This must match the query key on AdminStagesPage.
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-stages", roadmapId],
+      });
+
       onClose();
     },
-    onError: (error: Error) => {
-      setErrorMessage(error.message || "An unexpected error occurred.");
+
+    onError: (error) => {
+      setErrorMessage(
+        error.message || "An unexpected error occurred.",
+      );
+    },
+
+    onSettled: () => {
+      submitLockRef.current = false;
     },
   });
 
@@ -164,31 +238,55 @@ export function StageModal({
 
     if (!payload.isValid) {
       const formError = (payload as { error?: string }).error;
+
       setErrorMessage(
-        formError || "Please complete all required fields for this activity."
+        formError ||
+          "Please complete all required fields for this activity.",
       );
+
       return;
     }
 
-    if (!roadmapId || saveMutation.isPending) return;
+    if (
+      !roadmapId ||
+      saveMutation.isPending ||
+      submitLockRef.current
+    ) {
+      return;
+    }
 
+    // Synchronous guard against rapid repeated submissions.
+    submitLockRef.current = true;
     saveMutation.mutate(payload);
   };
 
-  const selectedActivity = ACTIVITY_TYPES.find((act) => act.id === type);
+  const selectedActivity = ACTIVITY_TYPES.find(
+    (activity) => activity.id === type,
+  );
 
   const initialFormData = stageToEdit?.payload
-    ? { ...stageToEdit.payload, type: stageToEdit.type as ActivityType }
+    ? {
+        ...stageToEdit.payload,
+        type: stageToEdit.type as ActivityType,
+      }
     : null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !saveMutation.isPending) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-xl h-[85vh] min-w-1/2 overflow-y-auto rounded-3xl scrollbar-none">
         <DialogHeader className="pb-2 border-b border-slate-100">
           <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-500 fill-amber-400" />
             {isEditing ? "Edit Stage Level" : "Configure Stage Level"}
           </DialogTitle>
+
           <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             {isEditing
               ? "Modify the activity format and update stage details"
@@ -202,12 +300,16 @@ export function StageModal({
               Activity Type
             </label>
 
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <Popover
+              open={popoverOpen}
+              onOpenChange={setPopoverOpen}
+            >
               <PopoverTrigger
                 render={
                   <button
                     type="button"
-                    className="w-full h-14 rounded-2xl border-2 border-slate-200 bg-white px-4 hover:border-green-500 focus:outline-none transition-all shadow-sm flex items-center justify-between cursor-pointer"
+                    disabled={saveMutation.isPending}
+                    className="w-full h-14 rounded-2xl border-2 border-slate-200 bg-white px-4 hover:border-cyan-500 focus:outline-none transition-all shadow-sm flex items-center justify-between cursor-pointer disabled:opacity-50"
                   >
                     {selectedActivity && (
                       <div className="flex items-center gap-3 min-w-0">
@@ -216,14 +318,17 @@ export function StageModal({
                         >
                           <selectedActivity.icon className="w-4 h-4" />
                         </div>
+
                         <span className="font-extrabold text-slate-800 text-sm truncate">
                           {selectedActivity.title}
                         </span>
+
                         <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0">
                           {selectedActivity.category}
                         </span>
                       </div>
                     )}
+
                     <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
                   </button>
                 }
@@ -244,13 +349,14 @@ export function StageModal({
                       <button
                         key={activity.id}
                         type="button"
+                        disabled={saveMutation.isPending}
                         onClick={() => {
                           setType(activity.id);
                           setPopoverOpen(false);
                         }}
-                        className={`p-2 rounded-xl border text-left transition-all flex items-center gap-2 relative cursor-pointer ${
+                        className={`p-2 rounded-xl border text-left transition-all flex items-center gap-2 relative cursor-pointer disabled:opacity-50 ${
                           isSelected
-                            ? "border-green-500 bg-green-50/60"
+                            ? "border-cyan-500 bg-cyan-50/60"
                             : "border-slate-100 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
@@ -259,14 +365,17 @@ export function StageModal({
                         >
                           <Icon className="w-4 h-4" />
                         </div>
+
                         <div className="flex-1 min-w-0">
                           <p className="font-extrabold text-slate-800 text-xs truncate">
                             {activity.title}
                           </p>
+
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                             {activity.category}
                           </span>
                         </div>
+
                         {isSelected && (
                           <Check className="w-3.5 h-3.5 text-green-600 stroke-[3] shrink-0" />
                         )}
@@ -297,15 +406,15 @@ export function StageModal({
             type="submit"
             form="stage-activity-form"
             disabled={saveMutation.isPending}
-            className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-2xl shadow-[0_4px_0_0_#15803d] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 cursor-pointer"
+            className="w-full h-12 bg-cyan-500 hover:bg-cyan-600 text-white font-black text-base rounded-2xl shadow-[0_5px_0_0_#cbd5e1] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 cursor-pointer"
           >
             {saveMutation.isPending
               ? isEditing
                 ? "Updating..."
                 : "Saving..."
               : isEditing
-              ? "Update Stage Level"
-              : "Save Stage Level"}
+                ? "Update Stage Level"
+                : "Save Stage Level"}
           </Button>
         </div>
       </DialogContent>

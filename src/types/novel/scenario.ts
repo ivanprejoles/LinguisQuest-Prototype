@@ -34,7 +34,7 @@ export interface StorySceneChoice {
 export interface StoryScene {
   nodeId: string;
   title: string;
-  type: string;
+  type: RoutePathType;
   bgImage: string;
   characterImage: string;
   bgMusic: string;

@@ -1,18 +1,22 @@
-// providers/query-provider.tsx
+
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-export default function QueryProvider({ children }: { children: React.ReactNode }) {
-  // Use useState to ensure QueryClient is created ONCE per browser session
+export default function QueryProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes default cache
+            staleTime: 5 * 60 * 1000,
             refetchOnWindowFocus: false,
+            retry: 1,
           },
         },
       })

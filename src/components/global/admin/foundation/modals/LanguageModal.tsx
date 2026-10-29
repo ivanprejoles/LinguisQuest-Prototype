@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import ErrorMessage from "../ErrorMessage";
 
 interface LanguageModalProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ const SUPPORTED_LANGUAGES = [
   { name: "French", countryCode: "fr", voiceLanguage: "fr-FR", flagUrl: "https://flagcdn.com/w80/fr.png" },
   { name: "Tagalog", countryCode: "ph", voiceLanguage: "tl-PH", flagUrl: "https://flagcdn.com/w80/ph.png" },
 ] as const;
+
+const languageQueryKey = ["admin-languages"] as const;
 
 export function LanguageModal({
   isOpen,
@@ -99,17 +102,37 @@ export function LanguageModal({
       });
 
       if (!res.ok) {
-        throw new Error(isEditing ? "Failed to update language" : "Failed to create language");
+        const body = await res.json().catch(() => null);
+
+        throw new Error(
+          body?.message ??
+            (isEditing
+              ? "Failed to update language. Please try again."
+              : "Failed to create language. Please try again.")
+        );
       }
 
       return res.json();
     },
     onSuccess: () => {
       // Automatically refetch any query using the ["languages"] key
-      queryClient.invalidateQueries({ queryKey: ["languages"] });
+      queryClient.invalidateQueries({ queryKey: languageQueryKey });
       onClose();
     },
   });
+
+  const submitSave = () => {
+    const trimmedName = customName.trim();
+
+    if (!trimmedName || saveMutation.isPending) return;
+
+    saveMutation.mutate({
+      name: trimmedName,
+      countryCode: countryCode.toLowerCase().trim(),
+      voiceLanguage: voiceLanguage.trim(),
+      ...(languageToEdit ? { id: languageToEdit.id } : {}),
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,7 +233,7 @@ export function LanguageModal({
           <Button
             type="submit"
             disabled={saveMutation.isPending}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-5 rounded-xl shadow-md disabled:opacity-50"
+            className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-5 rounded-xl shadow-md disabled:opacity-50"
           >
             {saveMutation.isPending
               ? "Saving..."
@@ -218,6 +241,18 @@ export function LanguageModal({
               ? "Update Language"
               : "Save Language"}
           </Button>
+          {saveMutation.isError && (
+            <ErrorMessage
+              title={
+                isEditing
+                  ? "Couldn't update language"
+                  : "Couldn't create language"
+              }
+              description={saveMutation.error.message}
+              actionLabel="Try again"
+              onAction={submitSave}
+            />
+          )}
         </form>
       </DialogContent>
     </Dialog>

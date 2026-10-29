@@ -1,8 +1,9 @@
 
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Trash2,
@@ -11,7 +12,9 @@ import {
   Loader2,
   FolderOpen,
   X,
-} from 'lucide-react';
+} from "lucide-react";
+
+import { PageShell } from "@/components/global/admin/foundation/page-shell";
 
 type Workspace = {
   id: string;
@@ -22,6 +25,29 @@ type Workspace = {
   updatedAt: string;
 };
 
+type SaveWorkspaceVariables = {
+  editingId: string | null;
+  title: string;
+  description: string;
+  imageFile: File | null;
+};
+
+async function getErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const data = await response.json();
+
+    if (typeof data?.error === "string") return data.error;
+    if (typeof data?.message === "string") return data.message;
+  } catch {
+    // The API might return a non-JSON error.
+  }
+
+  return fallback;
+}
+
 export default function WorkspaceDashboard() {
   const params = useParams<{
     adminId: string;
@@ -29,220 +55,262 @@ export default function WorkspaceDashboard() {
   }>();
 
   const router = useRouter();
+  const queryClient = useQueryClient();
+
   const { adminId, languageId } = params;
 
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const queryKey = ["admin-story-workspaces", languageId] as const;
 
+  const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState("");
 
-  const basePath =
-    `/admin-portal/${adminId}/${languageId}/story`;
+  const basePath = `/admin-portal/${adminId}/${languageId}/story`;
 
-  const loadWorkspaces = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  // Release locally generated image previews when replaced or unmounted.
+  useEffect(() => {
+    if (!preview.startsWith("blob:")) return;
 
-    try {
+    return () => {
+      URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  // 1. Fetch workspaces.
+  const {
+    data: workspaces = [],
+    isLoading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useQuery<Workspace[], Error>({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const search = new URLSearchParams({ languageId });
+
       const response = await fetch(
-        `/api/admin/novel/workspace?languageId=${encodeURIComponent(languageId)}`
+        `/api/admin/novel/workspace?${search.toString()}`,
+        { signal },
       );
-
-      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to load workspaces');
+        throw new Error(
+          await getErrorMessage(response, "Failed to load workspaces."),
+        );
       }
 
-      setWorkspaces(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load workspaces'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [languageId]);
+      return (await response.json()) as Workspace[];
+    },
+    enabled: Boolean(languageId),
+    retry: 1,
+  });
 
-  useEffect(() => {
-    void loadWorkspaces();
-  }, [loadWorkspaces]);
-
-  function openCreateModal() {
-    setEditingId(null);
-    setTitle('');
-    setDescription('');
-    setImageFile(null);
-    setPreview('');
-    setError('');
-    setModalOpen(true);
-  }
-
-  function openEditModal(workspace: Workspace) {
-    setEditingId(workspace.id);
-    setTitle(workspace.title ?? '');
-    setDescription(workspace.description ?? '');
-    setImageFile(null);
-    setPreview(workspace.imageUrl ?? '');
-    setError('');
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setImageFile(null);
-    setError('');
-  }
-
-  function handleImageChange(file?: File) {
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image.');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('The cover image must be 5 MB or smaller.');
-      return;
-    }
-
-    setError('');
-    setImageFile(file);
-    setPreview(URL.createObjectURL(file));
-  }
-
+  // 2. Upload a cover image when one is selected.
   async function uploadCover(file: File): Promise<string> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const response = await fetch(
-      '/api/admin/novel/workspace/upload',
+      "/api/admin/novel/workspace/upload",
       {
-        method: 'POST',
+        method: "POST",
         body: formData,
-      }
+      },
     );
+
+    if (!response.ok) {
+      throw new Error(
+        await getErrorMessage(response, "Cover image upload failed."),
+      );
+    }
 
     const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Cover image upload failed');
+    if (typeof data.url !== "string" || !data.url.trim()) {
+      throw new Error("The image upload did not return a valid URL.");
     }
 
     return data.url;
   }
 
-  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!title.trim()) {
-      setError('Please enter a workspace title.');
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-
-    try {
+  // 3. Create or update a workspace.
+  const saveMutation = useMutation<
+    { id?: string },
+    Error,
+    SaveWorkspaceVariables
+  >({
+    mutationFn: async ({
+      editingId: targetId,
+      title: workspaceTitle,
+      description: workspaceDescription,
+      imageFile: selectedImage,
+    }) => {
       let imageUrl: string | undefined;
 
-      if (imageFile) {
-        imageUrl = await uploadCover(imageFile);
+      if (selectedImage) {
+        imageUrl = await uploadCover(selectedImage);
       }
 
       const response = await fetch(
-        editingId
-          ? `/api/admin/novel/workspace/${editingId}`
-          : '/api/admin/novel/workspace',
+        targetId
+          ? `/api/admin/novel/workspace/${encodeURIComponent(targetId)}`
+          : "/api/admin/novel/workspace",
         {
-          method: editingId ? 'PATCH' : 'POST',
+          method: targetId ? "PATCH" : "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: title.trim(),
-            description: description.trim(),
-            ...(editingId ? {} : { languageId }),
+            title: workspaceTitle,
+            description: workspaceDescription,
+            ...(targetId ? {} : { languageId }),
             ...(imageUrl ? { imageUrl } : {}),
           }),
-        }
+        },
       );
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save workspace');
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : "Failed to save workspace.",
+        );
       }
 
-      closeModal();
+      return data as { id?: string };
+    },
+    onSuccess: async () => {
+      setModalOpen(false);
+      setImageFile(null);
+      setPreview("");
+      setError("");
 
-      if (!editingId) {
-        // Open the newly created workspace immediately.
-        router.push(`${basePath}/${data.id}`);
-        return;
-      }
+      await queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (mutationError) => {
+      setError(mutationError.message);
+    },
+  });
 
-      await loadWorkspaces();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to save workspace'
+  // 4. Delete a workspace.
+  const deleteMutation = useMutation<void, Error, Workspace>({
+    mutationFn: async (workspace) => {
+      const response = await fetch(
+        `/api/admin/novel/workspace/${encodeURIComponent(workspace.id)}`,
+        { method: "DELETE" },
       );
-    } finally {
-      setSaving(false);
-    }
+
+      if (!response.ok) {
+        throw new Error(
+          await getErrorMessage(response, "Failed to delete workspace."),
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+      setError("");
+    },
+
+    onError: (mutationError) => {
+      setError(mutationError.message);
+    },
+  });
+
+  function openCreateModal() {
+    setEditingId(null);
+    setTitle("");
+    setDescription("");
+    setImageFile(null);
+    setPreview("");
+    setError("");
+    setModalOpen(true);
   }
 
-  async function handleDelete(workspace: Workspace) {
+  function openEditModal(workspace: Workspace) {
+    setEditingId(workspace.id);
+    setTitle(workspace.title ?? "");
+    setDescription(workspace.description ?? "");
+    setImageFile(null);
+    setPreview(workspace.imageUrl ?? "");
+    setError("");
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    if (saveMutation.isPending) return;
+
+    setModalOpen(false);
+    setImageFile(null);
+    setPreview("");
+    setError("");
+  }
+
+  function handleImageChange(file?: File) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("The cover image must be 5 MB or smaller.");
+      return;
+    }
+
+    setError("");
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
+  }
+
+  function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!title.trim()) {
+      setError("Please enter a workspace title.");
+      return;
+    }
+
+    if (!languageId || saveMutation.isPending) return;
+
+    setError("");
+
+    saveMutation.mutate({
+      editingId,
+      title: title.trim(),
+      description: description.trim(),
+      imageFile,
+    });
+  }
+
+  function handleDelete(workspace: Workspace) {
+    if (deleteMutation.isPending) return;
+
     const confirmed = window.confirm(
-      `Delete "${workspace.title}"? This may also affect its related data.`
+      `Delete "${workspace.title}"? This may also affect its related data.`,
     );
 
     if (!confirmed) return;
 
-    setError('');
-
-    try {
-      const response = await fetch(
-        `/api/admin/novel/workspace/${workspace.id}`,
-        { method: 'DELETE' }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete workspace');
-      }
-
-      setWorkspaces((current) =>
-        current.filter((item) => item.id !== workspace.id)
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to delete workspace'
-      );
-    }
+    setError("");
+    deleteMutation.mutate(workspace);
   }
 
   return (
-    <main className="min-h-screen bg-[#0b1329] text-slate-100 p-5 md:p-10">
-      <div className="mx-auto max-w-7xl">
+    <PageShell className="h-full min-h-0 overflow-y-auto">
+      <div className="w-full space-y-6 pb-8">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="mb-2 flex items-center gap-2 text-indigo-300">
-              <FolderOpen size={20} />
-              <span className="text-sm font-medium">Story Studio</span>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight">
-              Workspaces
+            <h1 className="text-2xl font-black tracking-tight text-slate-800 flex items-center gap-2">
+              <FolderOpen className="w-6 h-6 text-cyan-500" />
+              Select Workspace
             </h1>
 
             <p className="mt-2 text-sm text-slate-400">
@@ -251,10 +319,11 @@ export default function WorkspaceDashboard() {
           </div>
 
           <button
+            type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold hover:bg-indigo-500"
+            className="flex items-center gap-2 bg-cyan-600 text-white px-4 py-2 rounded-2xl font-black text-sm hover:bg-cyan-700 transition cursor-pointer shadow-[0_4px_0_0_#0e7490]"
           >
-            <Plus size={18} />
+            <Plus className="w-4 h-4" />
             Create Workspace
           </button>
         </header>
@@ -265,9 +334,26 @@ export default function WorkspaceDashboard() {
           </div>
         )}
 
-        {loading ? (
-          <div className="flex justify-center py-24">
-            <Loader2 className="animate-spin text-indigo-400" size={30} />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="animate-spin text-cyan-600" size={32} />
+            <p className="mt-3 text-sm font-semibold text-slate-500">
+              Loading stories...
+            </p>
+          </div>
+        ) : isError ? (
+          <div className="py-16 text-center">
+            <p role="alert" className="text-sm text-red-400">
+              {queryError.message}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-4 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
+            >
+              Try Again
+            </button>
           </div>
         ) : workspaces.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-20 text-center">
@@ -283,8 +369,9 @@ export default function WorkspaceDashboard() {
             </p>
 
             <button
+              type="button"
               onClick={openCreateModal}
-              className="mt-6 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold hover:bg-indigo-500"
+              className="mt-6 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold hover:bg-cyan-500"
             >
               Create your first workspace
             </button>
@@ -294,7 +381,7 @@ export default function WorkspaceDashboard() {
             {workspaces.map((workspace) => (
               <article
                 key={workspace.id}
-                className="group overflow-hidden rounded-2xl border border-slate-800 bg-[#111c35] transition hover:border-indigo-500/70"
+                className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-cyan-300 hover:shadow-md"
               >
                 <button
                   type="button"
@@ -307,23 +394,24 @@ export default function WorkspaceDashboard() {
                     {workspace.imageUrl ? (
                       <img
                         src={workspace.imageUrl}
-                        alt={workspace.title || ''}
+                        alt={workspace.title || ""}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-slate-500">
+                      <div className="flex h-full items-center justify-center text-slate-400">
                         <ImagePlus size={36} />
                       </div>
                     )}
                   </div>
 
                   <div className="p-4 pb-2">
-                    <h2 className="truncate text-lg font-semibold">
-                      {workspace.title?.trim() || 'Untitled Workspace'}
+                    <h2 className="truncate text-lg font-semibold text-slate-900">
+                      {workspace.title?.trim() || "Untitled Workspace"}
                     </h2>
 
-                    <p className="mt-2 min-h-10 line-clamp-2 text-sm text-slate-400">
-                      {workspace.description?.trim() || 'No description provided.'}
+                    <p className="mt-2 min-h-10 line-clamp-2 text-sm text-slate-500">
+                      {workspace.description?.trim() ||
+                        "No description provided."}
                     </p>
                   </div>
                 </button>
@@ -346,8 +434,9 @@ export default function WorkspaceDashboard() {
                     <button
                       type="button"
                       aria-label={`Delete ${workspace.title}`}
-                      onClick={() => void handleDelete(workspace)}
-                      className="rounded-lg p-2 text-red-400 hover:bg-red-500/10"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => handleDelete(workspace)}
+                      className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -363,19 +452,19 @@ export default function WorkspaceDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4">
           <form
             onSubmit={handleSave}
-            className="my-auto w-full max-w-lg space-y-5 rounded-2xl border border-slate-700 bg-[#111c35] p-6 shadow-2xl"
+            className="my-auto w-full max-w-lg space-y-5 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">
-                {editingId ? 'Edit Workspace' : 'Create Workspace'}
+                {editingId ? "Edit Workspace" : "Create Workspace"}
               </h2>
 
               <button
                 type="button"
                 onClick={closeModal}
-                disabled={saving}
+                disabled={saveMutation.isPending}
                 aria-label="Close modal"
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-700"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
               >
                 <X size={18} />
               </button>
@@ -387,7 +476,7 @@ export default function WorkspaceDashboard() {
               </label>
 
               <label className="block cursor-pointer">
-                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-600 bg-[#0b1329]">
+                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
                   {preview ? (
                     <img
                       src={preview}
@@ -406,6 +495,7 @@ export default function WorkspaceDashboard() {
                 <input
                   type="file"
                   accept="image/*"
+                  disabled={saveMutation.isPending}
                   className="hidden"
                   onChange={(event) =>
                     handleImageChange(event.target.files?.[0])
@@ -424,12 +514,13 @@ export default function WorkspaceDashboard() {
 
               <input
                 id="workspace-title"
-                value={title ?? ''}
+                value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={120}
                 required
+                disabled={saveMutation.isPending}
                 placeholder="e.g. The Lost Kingdom"
-                className="w-full rounded-lg border border-slate-700 bg-[#0b1329] px-3 py-3 outline-none focus:border-indigo-500"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               />
             </div>
 
@@ -447,8 +538,9 @@ export default function WorkspaceDashboard() {
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={2000}
                 rows={3}
+                disabled={saveMutation.isPending}
                 placeholder="Describe this story..."
-                className="w-full resize-y rounded-lg border border-slate-700 bg-[#0b1329] px-3 py-3 outline-none focus:border-indigo-500"
+                className="w-full resize-y rounded-lg border border-slate-700 px-3 py-3 outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -462,28 +554,31 @@ export default function WorkspaceDashboard() {
               <button
                 type="button"
                 onClick={closeModal}
-                disabled={saving}
-                className="rounded-lg bg-slate-700 px-4 py-2.5 text-sm hover:bg-slate-600 disabled:opacity-50"
+                disabled={saveMutation.isPending}
+                className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-200 disabled:opacity-50"
               >
                 Cancel
               </button>
 
               <button
                 type="submit"
-                disabled={saving || !(title ?? '').trim()}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold hover:bg-indigo-500 disabled:opacity-50"
+                disabled={saveMutation.isPending || !title.trim()}
+                className="flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
               >
-                {saving && <Loader2 size={16} className="animate-spin" />}
-                {saving
-                  ? 'Saving...'
+                {saveMutation.isPending && (
+                  <Loader2 size={16} className="animate-spin" />
+                )}
+
+                {saveMutation.isPending
+                  ? "Saving..."
                   : editingId
-                    ? 'Save Changes'
-                    : 'Create Workspace'}
+                    ? "Save Changes"
+                    : "Create Workspace"}
               </button>
             </div>
           </form>
         </div>
       )}
-    </main>
+    </PageShell>
   );
 }

@@ -138,7 +138,7 @@ export default function LanguagesPage() {
   }
 
   return (
-    <main className="relative h-fit overflow-hidden text-white">
+    <main className="relative h-full overflow-hidden text-white">
       {/* Ambient background */}
       <div
         aria-hidden="true"

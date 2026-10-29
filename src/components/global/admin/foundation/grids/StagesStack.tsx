@@ -122,7 +122,7 @@ export function StagesStack({
               onDragStart={() => onDragStart(index)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(index)}
-              className="group relative bg-white border-2 border-slate-200 hover:border-green-500 rounded-2xl p-4 shadow-[0_4px_0_0_#e2e8f0] transition-all duration-150 flex items-center justify-between gap-4 cursor-grab active:cursor-grabbing"
+              className="group relative bg-white border-2 border-slate-200 hover:border-cyan-500 rounded-2xl p-4 shadow-[0_4px_0_0_#e2e8f0] transition-all duration-150 flex items-center justify-between gap-4 cursor-grab active:cursor-grabbing"
             >
               {/* Left Content */}
               <div className="flex items-center gap-3 min-w-0">
@@ -155,7 +155,7 @@ export function StagesStack({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg cursor-pointer"
+                  className="h-8 w-8 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg cursor-pointer"
                   onClick={() => onEdit(stg)}
                 >
                   <Pencil className="w-4 h-4" />

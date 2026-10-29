@@ -8,6 +8,8 @@ export async function GET(
   try {
     const { sessionId } = await params;
 
+    console.log(sessionId)
+
     if (!sessionId) {
       return NextResponse.json(
         { error: 'Session ID is required' },
@@ -42,6 +44,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    console.log(session)
 
     return NextResponse.json(session);
   } catch (error) {
