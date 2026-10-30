@@ -73,7 +73,7 @@ export function MultipleChoice({
   return (
     <div className="flex flex-col items-center max-w-xl mx-auto w-full gap-6 select-none">
       {/* Question / Instruction Heading */}
-      <h2 className="text-xl font-black text-slate-800 text-center leading-snug">
+      <h2 className="text-xl font-black text-white text-center leading-snug">
         {getText(payload?.question) || "Select the correct option"}
       </h2>
 

@@ -58,28 +58,90 @@ export function LetterTracing({
   };
 
   // Touch & Mouse Handlers
+  // const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+  //   if (disabled || !engineRef.current) return;
+  //   isDrawingRef.current = true;
+
+  //   const coords = engineRef.current.getCoordinates(e);
+  //   lastPosRef.current = coords;
+
+  //   const currentMetrics = engineRef.current.verifyCoordinate(
+  //     coords.x,
+  //     coords.y
+  //   );
+  //   setMetrics(currentMetrics);
+  //   onAnswerChange(currentMetrics.isPassed);
+  // };
+  
   const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (disabled || !engineRef.current) return;
+
     isDrawingRef.current = true;
 
     const coords = engineRef.current.getCoordinates(e);
     lastPosRef.current = coords;
 
+    // Record the initial point on both the visible canvas
+    // and the transparent coverage-tracking canvas.
+    engineRef.current.drawStrokeSegment(
+      coords.x,
+      coords.y,
+      coords.x,
+      coords.y,
+      "#22c55e"
+    );
+
     const currentMetrics = engineRef.current.verifyCoordinate(
       coords.x,
       coords.y
     );
+
     setMetrics(currentMetrics);
     onAnswerChange(currentMetrics.isPassed);
   };
 
+
+  // const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+  //   if (disabled || !isDrawingRef.current || !engineRef.current || !lastPosRef.current)
+  //     return;
+
+  //   const currentCoords = engineRef.current.getCoordinates(e);
+  //   const strokeColor = metrics.isFailed ? "#ef4444" : "#22c55e";
+
+  //   engineRef.current.drawStrokeSegment(
+  //     lastPosRef.current.x,
+  //     lastPosRef.current.y,
+  //     currentCoords.x,
+  //     currentCoords.y,
+  //     strokeColor
+  //   );
+
+  //   lastPosRef.current = currentCoords;
+  //   const updatedMetrics = engineRef.current.verifyCoordinate(
+  //     currentCoords.x,
+  //     currentCoords.y
+  //   );
+  //   setMetrics(updatedMetrics);
+  //   onAnswerChange(updatedMetrics.isPassed);
+  // };
+  
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (disabled || !isDrawingRef.current || !engineRef.current || !lastPosRef.current)
+    if (
+      disabled ||
+      !isDrawingRef.current ||
+      !engineRef.current ||
+      !lastPosRef.current
+    ) {
       return;
+    }
 
     const currentCoords = engineRef.current.getCoordinates(e);
-    const strokeColor = metrics.isFailed ? "#ef4444" : "#22c55e";
 
+    const strokeColor = metrics.isFailed
+      ? "#ef4444"
+      : "#22c55e";
+
+    // Draw the complete segment on both canvases.
     engineRef.current.drawStrokeSegment(
       lastPosRef.current.x,
       lastPosRef.current.y,
@@ -89,13 +151,17 @@ export function LetterTracing({
     );
 
     lastPosRef.current = currentCoords;
+
+    // Recalculate accuracy and coverage from the drawn stroke.
     const updatedMetrics = engineRef.current.verifyCoordinate(
       currentCoords.x,
       currentCoords.y
     );
+
     setMetrics(updatedMetrics);
     onAnswerChange(updatedMetrics.isPassed);
   };
+
 
   const handleEnd = () => {
     isDrawingRef.current = false;
@@ -105,7 +171,7 @@ export function LetterTracing({
   return (
     <div className="flex flex-col items-center max-w-xl mx-auto w-full gap-5 select-none">
       {/* Question Header */}
-      <h2 className="text-xl font-black text-slate-800 text-center leading-snug">
+      <h2 className="text-xl font-black text-white text-center leading-snug">
         {payload?.question || `Trace the letter "${targetLetter}" carefully`}
       </h2>
 
