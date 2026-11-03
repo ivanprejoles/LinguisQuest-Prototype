@@ -1,16 +1,21 @@
-import { handleApiError } from "./api-response";
 
+import { NextRequest } from 'next/server';
+import { handleApiError } from './api-response';
 
-export function withApiHandler<C = undefined>(
+type RouteContext = {
+  params: Promise<Record<string, string>>;
+};
+
+export function withApiHandler(
   handler: (
-    request: Request,
-    context: C,
+    request: NextRequest,
+    context: RouteContext,
   ) => Promise<Response>,
   contextName = 'API',
 ) {
   return async (
-    request: Request,
-    routeContext: C,
+    request: NextRequest,
+    routeContext: RouteContext,
   ): Promise<Response> => {
     try {
       return await handler(request, routeContext);
