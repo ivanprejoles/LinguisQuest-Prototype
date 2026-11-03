@@ -46,5 +46,7 @@ export interface StoryScene {
 export interface StoryGraphResponse {
   id: string;
   title: string | null;
+  imageUrl: string | null;
+  description: string | null;
   graphNodes: StoryScene[];
 }

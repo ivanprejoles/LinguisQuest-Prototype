@@ -1,11 +1,17 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// Helper functions using standard JavaScript/RegExp matching
+// ------------------------------------------
+// 1. ROUTE DEFINITIONS
+// ------------------------------------------
+
 const isPublicRoute = (pathname: string) =>
   pathname === "/" ||
   /^\/sign-in($|\/)/.test(pathname) ||
   /^\/sign-up($|\/)/.test(pathname) ||
+  /^\/privacy-policy($|\/)/.test(pathname) ||
+  /^\/terms($|\/)/.test(pathname) ||
+  /^\/contact($|\/)/.test(pathname) ||
   /^\/api\/public($|\/)/.test(pathname);
 
 const isAdminRoute = (pathname: string) =>
@@ -13,69 +19,127 @@ const isAdminRoute = (pathname: string) =>
   /^\/admin-portal($|\/)/.test(pathname) ||
   /^\/api\/admin($|\/)/.test(pathname);
 
+const isUserRoute = (pathname: string) =>
+  /^\/language($|\/)/.test(pathname) ||
+  /^\/leaderboards($|\/)/.test(pathname) ||
+  /^\/profile($|\/)/.test(pathname) ||
+  /^\/api\/user($|\/)/.test(pathname) ||
+  /^\/api\/users($|\/)/.test(pathname);
+
+const isApiRequest = (pathname: string) =>
+  pathname.startsWith("/api/") ||
+  pathname === "/api" ||
+  pathname.startsWith("/trpc/") ||
+  pathname === "/trpc";
+
+// ------------------------------------------
+// 2. CLERK MIDDLEWARE
+// ------------------------------------------
+
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const { userId, sessionClaims } = await auth();
-  const isApiRequest = pathname.startsWith("/api");
 
-  // Extract user role from Clerk session metadata (ensure publicMetadata is synced in Clerk)
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const isApi = isApiRequest(pathname);
 
-  // 1. Redirect Authenticated Users Away From Public Landing / Auth Pages
-  if (userId && isPublicRoute(pathname) && !isApiRequest) {
+  const role = (
+    sessionClaims?.metadata as { role?: string } | undefined
+  )?.role;
+
+  // ----------------------------------------
+  // 3. PUBLIC ROUTES AND REDIRECTION
+  // ----------------------------------------
+
+  if (userId && isPublicRoute(pathname) && !isApi) {
     if (role === "admin") {
-      return NextResponse.redirect(new URL(`/admin-portal/${userId}`, req.url));
+      return NextResponse.redirect(
+        new URL(`/admin-portal/${userId}`, req.url)
+      );
     }
-    // Standard learner redirection goes straight to /languages
-    return NextResponse.redirect(new URL("/language", req.url));
+
+    return NextResponse.redirect(
+      new URL("/language", req.url)
+    );
   }
 
-  // 2. Unauthenticated Public Access
   if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
 
-  // 3. Admin Routes Protection (/admin, /admin-portal, /api/admin)
-  if (isAdminRoute(pathname)) {
-    // A. Unauthenticated Attempt
-    if (!userId) {
-      if (isApiRequest) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      const signInUrl = new URL("/sign-in", req.url);
-      signInUrl.searchParams.set("redirect_url", req.url);
-      return NextResponse.redirect(signInUrl);
+  // ----------------------------------------
+  // 4. REQUIRE LOGIN
+  // ----------------------------------------
+
+  if (!userId) {
+    if (isApi) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // B. Role Verification Check
+    const signInUrl = new URL("/sign-in", req.url);
+    signInUrl.searchParams.set("redirect_url", req.url);
+
+    return NextResponse.redirect(signInUrl);
+  }
+
+  // ----------------------------------------
+  // 5. ADMIN PROTECTION
+  // ----------------------------------------
+
+  if (isAdminRoute(pathname)) {
     if (role !== "admin") {
-      if (isApiRequest) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (isApi) {
+        return NextResponse.json(
+          { error: "Forbidden" },
+          { status: 403 }
+        );
       }
-      // Non-admins get redirected to 404 to obfuscate admin routes
-      return NextResponse.redirect(new URL("/404", req.url));
+
+      return NextResponse.redirect(
+        new URL("/language", req.url)
+      );
     }
-    
+
     return NextResponse.next();
   }
 
-  // 4. Default Catch-all for Protected Client Routes (/languages, /stage, /profile, etc.)
-  // If it's not public and not admin, it requires authentication.
-  if (!userId) {
-    if (isApiRequest) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // ----------------------------------------
+  // 6. USER PROTECTION
+  // ----------------------------------------
+
+  if (isUserRoute(pathname)) {
+    if (role === "admin") {
+      if (isApi) {
+        return NextResponse.json(
+          { error: "Forbidden" },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.redirect(
+        new URL(`/admin-portal/${userId}`, req.url)
+      );
     }
-    const signInUrl = new URL("/sign-in", req.url);
-    signInUrl.searchParams.set("redirect_url", req.url);
-    return NextResponse.redirect(signInUrl);
+
+    return NextResponse.next();
   }
+
+  // ----------------------------------------
+  // 7. OTHER AUTHENTICATED ROUTES
+  // ----------------------------------------
 
   return NextResponse.next();
 });
 
+// ------------------------------------------
+// 8. MATCHER
+// ------------------------------------------
+
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpeg|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
   ],
 };

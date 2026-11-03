@@ -1,7 +1,9 @@
 
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 
 const SignIn = dynamic(
@@ -20,6 +22,16 @@ const backgroundImage =
 export default function SignInPage() {
   return (
     <main className="relative isolate flex min-h-screen min-h-[100svh] items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 sm:px-8 lg:justify-end lg:pr-[14%] lg:pl-8">
+      
+      {/* Back to homepage button */}
+      <Link
+        href="/"
+        aria-label="Back to homepage"
+        className="fixed left-5 top-5 z-50 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/50 bg-slate-950/90 text-cyan-300 shadow-lg shadow-cyan-950/30 backdrop-blur-md transition-all duration-200 hover:-translate-x-1 hover:border-cyan-300 hover:bg-cyan-950 hover:text-cyan-100 sm:left-8 sm:top-8"
+      >
+        <ChevronLeft className="h-6 w-6" strokeWidth={2.5} />
+      </Link>
+      
       {/* Background image */}
       <div
         aria-hidden="true"
@@ -38,6 +50,7 @@ export default function SignInPage() {
         <SignIn  
           appearance={{
             elements: {
+              
               rootBox: "w-full",
               card: "w-full rounded-2xl border border-cyan-400/60 bg-slate-950/95 text-slate-100 shadow-[0_8px_0_#083344,0_16px_32px_rgba(6,182,212,0.30)]",
 

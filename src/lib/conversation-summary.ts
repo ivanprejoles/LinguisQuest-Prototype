@@ -10,10 +10,39 @@ export type ConversationSummary = {
   pendingTasks: string[];
 };
 
+/**
+ * Small, intentional limits to prevent conversation memory
+ * from growing into a second conversation transcript.
+ */
 export const SUMMARY_LIMITS = {
-  textLength: 500,
-  listItems: 20,
-  listItemLength: 200,
+  sessionGoal: 100,
+  learnerLevel: 24,
+  currentScenarioState: 150,
+
+  preferences: {
+    items: 3,
+    itemLength: 80,
+  },
+
+  importantFacts: {
+    items: 3,
+    itemLength: 100,
+  },
+
+  vocabularyLearned: {
+    items: 8,
+    itemLength: 60,
+  },
+
+  correctionsAndDifficulties: {
+    items: 4,
+    itemLength: 100,
+  },
+
+  pendingTasks: {
+    items: 3,
+    itemLength: 80,
+  },
 } as const;
 
 const emptySummary = (): ConversationSummary => ({
@@ -27,146 +56,202 @@ const emptySummary = (): ConversationSummary => ({
   pendingTasks: [],
 });
 
-// Explicitly use number so callers can pass 500, 200, or other limits.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
 function cleanText(
   value: unknown,
-  maxLength: number = SUMMARY_LIMITS.textLength,
+  maxLength: number,
 ): string {
   if (typeof value !== "string") return "";
 
-  return value.trim().slice(0, maxLength);
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, maxLength);
 }
 
-function cleanList(value: unknown): string[] {
+function cleanList(
+  value: unknown,
+  maxItems: number,
+  maxItemLength: number,
+): string[] {
   if (!Array.isArray(value)) return [];
 
-  const seen = new Set<string>();
   const result: string[] = [];
+  const seen = new Set<string>();
 
   for (const item of value) {
-    const cleaned = cleanText(item, SUMMARY_LIMITS.listItemLength);
+    const cleaned = cleanText(item, maxItemLength);
 
     if (!cleaned) continue;
 
-    const key = cleaned.toLocaleLowerCase();
+    const key = cleaned.toLowerCase();
 
     if (seen.has(key)) continue;
 
     seen.add(key);
     result.push(cleaned);
 
-    if (result.length >= SUMMARY_LIMITS.listItems) break;
-  }
-
-  return result;
-}
-
-function mergeLists(
-  previous: string[],
-  next: string[],
-  limit: number = SUMMARY_LIMITS.listItems,
-): string[] {
-  const result: string[] = [];
-  const seen = new Set<string>();
-
-  // Prioritize newly generated information.
-  for (const item of [...next, ...previous]) {
-    const cleaned = cleanText(item, SUMMARY_LIMITS.listItemLength);
-
-    if (!cleaned) continue;
-
-    const key = cleaned.toLocaleLowerCase();
-
-    if (seen.has(key)) continue;
-
-    seen.add(key);
-    result.push(cleaned);
-
-    if (result.length >= limit) break;
+    if (result.length >= maxItems) break;
   }
 
   return result;
 }
 
 /**
- * Validates and bounds a summary returned by Gemini or received
- * from the client. All input is treated as untrusted.
+ * Combines new information with previous information.
+ * Newer items take priority.
+ */
+function mergeLists(
+  previous: string[],
+  next: string[],
+  maxItems: number,
+  maxItemLength: number,
+): string[] {
+  return cleanList(
+    [...next, ...previous],
+    maxItems,
+    maxItemLength,
+  );
+}
+
+/**
+ * Validates and limits a summary received from Gemini,
+ * persisted storage, or an API request.
  */
 export function sanitizeConversationSummary(
   value: unknown,
 ): ConversationSummary {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return emptySummary();
   }
 
-  const data = value as Record<string, unknown>;
-
   return {
-    sessionGoal: cleanText(data.sessionGoal),
-    learnerLevel: cleanText(data.learnerLevel),
-    preferences: cleanList(data.preferences),
-    importantFacts: cleanList(data.importantFacts),
-    vocabularyLearned: cleanList(data.vocabularyLearned),
-    correctionsAndDifficulties: cleanList(
-      data.correctionsAndDifficulties,
+    sessionGoal: cleanText(
+      value.sessionGoal,
+      SUMMARY_LIMITS.sessionGoal,
     ),
-    currentScenarioState: cleanText(data.currentScenarioState),
-    pendingTasks: cleanList(data.pendingTasks),
+
+    learnerLevel: cleanText(
+      value.learnerLevel,
+      SUMMARY_LIMITS.learnerLevel,
+    ),
+
+    preferences: cleanList(
+      value.preferences,
+      SUMMARY_LIMITS.preferences.items,
+      SUMMARY_LIMITS.preferences.itemLength,
+    ),
+
+    importantFacts: cleanList(
+      value.importantFacts,
+      SUMMARY_LIMITS.importantFacts.items,
+      SUMMARY_LIMITS.importantFacts.itemLength,
+    ),
+
+    vocabularyLearned: cleanList(
+      value.vocabularyLearned,
+      SUMMARY_LIMITS.vocabularyLearned.items,
+      SUMMARY_LIMITS.vocabularyLearned.itemLength,
+    ),
+
+    correctionsAndDifficulties: cleanList(
+      value.correctionsAndDifficulties,
+      SUMMARY_LIMITS.correctionsAndDifficulties.items,
+      SUMMARY_LIMITS.correctionsAndDifficulties.itemLength,
+    ),
+
+    currentScenarioState: cleanText(
+      value.currentScenarioState,
+      SUMMARY_LIMITS.currentScenarioState,
+    ),
+
+    pendingTasks: cleanList(
+      value.pendingTasks,
+      SUMMARY_LIMITS.pendingTasks.items,
+      SUMMARY_LIMITS.pendingTasks.itemLength,
+    ),
   };
 }
 
 /**
- * Keeps useful learning history while allowing the current scenario
- * and pending tasks to reflect Gemini's latest understanding.
+ * Merges a new Gemini summary into existing memory.
+ *
+ * Merge policy:
+ * - Session goal: update when new non-empty information is supplied.
+ * - Learner level: update when new non-empty information is supplied.
+ * - Preferences, facts, vocabulary and difficulties: retain useful
+ *   previous items, prioritizing new items.
+ * - Scenario state: replace when explicitly supplied.
+ * - Pending tasks: replace when explicitly supplied, including [].
  */
 export function mergeConversationSummaries(
   previousValue: unknown,
   nextValue: unknown,
 ): ConversationSummary {
   const previous = sanitizeConversationSummary(previousValue);
+
+  if (!isRecord(nextValue)) {
+    return previous;
+  }
+
   const next = sanitizeConversationSummary(nextValue);
 
-  const nextIsObject =
-    nextValue !== null &&
-    typeof nextValue === "object" &&
-    !Array.isArray(nextValue);
-
-  const nextHasPendingTasks =
-    nextIsObject &&
-    Array.isArray(
-      (nextValue as Record<string, unknown>).pendingTasks,
-    );
+  const hasField = (field: keyof ConversationSummary) =>
+    Object.prototype.hasOwnProperty.call(nextValue, field);
 
   return {
-    sessionGoal: next.sessionGoal || previous.sessionGoal,
-    learnerLevel: next.learnerLevel || previous.learnerLevel,
+    sessionGoal:
+      next.sessionGoal || previous.sessionGoal,
+
+    learnerLevel:
+      next.learnerLevel || previous.learnerLevel,
 
     preferences: mergeLists(
       previous.preferences,
       next.preferences,
+      SUMMARY_LIMITS.preferences.items,
+      SUMMARY_LIMITS.preferences.itemLength,
     ),
 
     importantFacts: mergeLists(
       previous.importantFacts,
       next.importantFacts,
+      SUMMARY_LIMITS.importantFacts.items,
+      SUMMARY_LIMITS.importantFacts.itemLength,
     ),
 
     vocabularyLearned: mergeLists(
       previous.vocabularyLearned,
       next.vocabularyLearned,
+      SUMMARY_LIMITS.vocabularyLearned.items,
+      SUMMARY_LIMITS.vocabularyLearned.itemLength,
     ),
 
     correctionsAndDifficulties: mergeLists(
       previous.correctionsAndDifficulties,
       next.correctionsAndDifficulties,
+      SUMMARY_LIMITS.correctionsAndDifficulties.items,
+      SUMMARY_LIMITS.correctionsAndDifficulties.itemLength,
     ),
 
     currentScenarioState:
-      next.currentScenarioState || previous.currentScenarioState,
+      hasField("currentScenarioState") &&
+      typeof nextValue.currentScenarioState === "string"
+        ? next.currentScenarioState
+        : previous.currentScenarioState,
 
-    pendingTasks: nextHasPendingTasks
-      ? next.pendingTasks
-      : previous.pendingTasks,
+    pendingTasks:
+      hasField("pendingTasks") &&
+      Array.isArray(nextValue.pendingTasks)
+        ? next.pendingTasks
+        : previous.pendingTasks,
   };
 }
 
@@ -175,6 +260,9 @@ export function createEmptyConversationSummary(
 ): ConversationSummary {
   return {
     ...emptySummary(),
-    sessionGoal: cleanText(sessionGoal),
+    sessionGoal: cleanText(
+      sessionGoal,
+      SUMMARY_LIMITS.sessionGoal,
+    ),
   };
 }

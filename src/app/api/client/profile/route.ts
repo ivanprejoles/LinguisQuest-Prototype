@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getMedalProgress } from "@/lib/exp-converter";
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 30;
@@ -278,6 +279,7 @@ export async function GET(request: NextRequest) {
           name: user.name?.trim() || "Learner",
           imageUrl: user.imageUrl,
           xp: Math.max(0, user.xp),
+          ...getMedalProgress(user.xp),
           joinedAt: user.createdAt,
           foundationStageRecordCount: user._count.stageScores,
           storySessionCount: user._count.storyProgress,

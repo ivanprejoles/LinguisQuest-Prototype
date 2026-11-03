@@ -17,6 +17,7 @@ import { FillInTheBlank } from "./LearningMaterials/FillInTheBlank";
 import { TapWhatYouHear } from "./LearningMaterials/TapWhatYouHear";
 import { MultipleChoice } from "./LearningMaterials/MultipleChoice";
 import { MatchingPairs } from "./LearningMaterials/MatchingPairs";
+import { useLanguageStore } from "@/store/foundation/language-store";
 
 export interface RoadmapLanguage {
   id?: string;
@@ -54,7 +55,9 @@ export function StageMaterialRenderer({
   stage,
   onAnswerChange,
 }: StageMaterialRendererProps) {
-  const voiceLanguage = stage.roadmap?.language?.voiceLanguage || "en-US";
+  const voiceLanguage = useLanguageStore(
+      (state) => state.selectedLanguage?.voiceLanguage
+    ) || "tl-PH"
 
   switch (stage.type) {
     case "sentenceBuilder":
@@ -97,6 +100,7 @@ export function StageMaterialRenderer({
         <MultipleChoice
           payload={stage.payload as MultipleChoicePayload}
           onAnswerChange={onAnswerChange}
+          voiceLanguage={voiceLanguage}
         />
       );
 

@@ -97,7 +97,7 @@ export default async function AdminPortalLayout({
                 />
 
                 <img
-                  src="/LinguisQuest-title.png"
+                  src="https://ik.imagekit.io/uch28of0b/LinguisQuest-public-assets/LinguisQuest-title.png"
                   alt="LinguisQuest"
                   className="relative z-10 h-full w-auto object-contain"
                 />

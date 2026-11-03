@@ -839,7 +839,7 @@ export default function LeaderboardsPage() {
                       kind={type}
                       subtitle={
                         isFoundation
-                            ? `Stage ${(entry as FoundationEntry).stageOrder} · ${
+                            ? `Stage ${(entry as FoundationEntry).stageOrder + 1} · ${
                                 (entry as FoundationEntry).roadmapTitle
                             }`
                             : `${((entry as StoryEntry).winRate * 100).toFixed(0)}% win rate`
@@ -989,7 +989,7 @@ export default function LeaderboardsPage() {
                                   />
                                 </div>
                                 <span className="text-[11px] font-bold text-slate-500">
-                                  Stage {(entry as FoundationEntry).stageOrder}
+                                  Stage {(entry as FoundationEntry).stageOrder + 1}
                                 </span>
                               </div>
                             </>

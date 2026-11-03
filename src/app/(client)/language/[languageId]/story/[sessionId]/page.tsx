@@ -1,800 +1,3 @@
-// // 'use client';
-
-// // import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-// // import { useParams } from 'next/navigation';
-// // import { useQuery } from '@tanstack/react-query';
-// // import type {
-// //   StoryGraphResponse,
-// //   StoryScene,
-// // } from '@/types/novel/scenario';
-// // import StoryScenePlayer from '@/components/global/story/scene/StoryScenePlayer';
-
-// // async function fetchStoryGraph(
-// //   languageId: string,
-// //   sessionId: string,
-// //   signal: AbortSignal
-// // ): Promise<StoryGraphResponse> {
-// //   const response = await fetch(
-// //     `/api/client/story/${encodeURIComponent(sessionId)}?languageId=${encodeURIComponent(languageId)}`,
-// //     {
-// //       method: 'GET',
-// //       signal,
-// //       cache: 'no-store',
-// //     }
-// //   );
-
-// //   if (!response.ok) {
-// //     throw new Error('Could not load this story.');
-// //   }
-
-// //   const data: StoryGraphResponse = await response.json();
-
-// //   console.log(data)
-
-// //   return data;
-// // }
-
-// // export default function StoryPlayerPage() {
-// //   const params = useParams<{
-// //     languageId: string;
-// //     sessionId: string;
-// //   }>();
-
-// //   const languageId = params.languageId;
-// //   const sessionId = params.sessionId;
-
-// //   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-// //   const [dialogueIdx, setDialogueIdx] = useState(0);
-// //   const [sceneEntryCount, setSceneEntryCount] = useState(0);
-// //   const [navigationError, setNavigationError] = useState<string | null>(null);
-
-// //   // Tracks nodes visited in this page session.
-// //   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(
-// //     () => new Set()
-// //   );
-
-// //   // Prevents background refetches from resetting the learner's progress.
-// //   const initializedSessionKey = useRef<string | null>(null);
-
-// //   const {
-// //     data,
-// //     isPending,
-// //     isError,
-// //     error,
-// //   } = useQuery<StoryGraphResponse, Error>({
-// //     queryKey: ['story-graph', languageId, sessionId],
-// //     enabled: Boolean(languageId && sessionId),
-// //     queryFn: ({ signal }) =>
-// //       fetchStoryGraph(languageId, sessionId, signal),
-// //     staleTime: 30 * 60 * 1000, // 30 minutes
-// //     refetchOnMount: true,
-// //     refetchOnWindowFocus: true,
-// //     retry: 1,
-// //   });
-
-// //   console.log(data)
-
-// //   const graph = data?.graphNodes ?? [];
-
-// //   // Build the lookup whenever the fetched graph changes.
-// //   const nodesById = useMemo(() => {
-// //     const lookup: Record<string, StoryScene> = {};
-
-// //     for (const node of graph) {
-// //       lookup[node.nodeId] = node;
-// //     }
-
-// //     return lookup;
-// //   }, [graph]);
-
-// //   const activeNode = activeNodeId
-// //     ? nodesById[activeNodeId] ?? null
-// //     : null;
-
-// //   // Initialize the starting node once per language/story combination.
-// //   useEffect(() => {
-// //     if (!languageId || !sessionId || !graph.length) return;
-
-// //     const sessionKey = `${languageId}:${sessionId}`;
-
-// //     if (initializedSessionKey.current === sessionKey) return;
-
-// //     const startingNode =
-// //       graph.find((node) => node.type === 'starting') ?? graph[0];
-
-// //     initializedSessionKey.current = sessionKey;
-
-// //     // TODO: replace this initial-node selection with the saved
-// //     // checkpoint once the learner progress API is connected.
-// //     setActiveNodeId(startingNode.nodeId);
-// //     setDialogueIdx(0);
-// //     setSceneEntryCount(0);
-// //     setNavigationError(null);
-// //     setVisitedNodeIds(new Set([startingNode.nodeId]));
-// //   }, [languageId, sessionId, graph]);
-
-// //   // Navigate using the graph already in memory.
-// //   const enterNode = useCallback(
-// //     (nodeId: string) => {
-// //       if (!nodesById[nodeId]) {
-// //         setNavigationError(
-// //           `Scenario "${nodeId}" was not found in this story.`
-// //         );
-// //         return;
-// //       }
-
-// //       setNavigationError(null);
-// //       setActiveNodeId(nodeId);
-// //       setDialogueIdx(0);
-// //       setSceneEntryCount((count) => count + 1);
-
-// //       setVisitedNodeIds((previous) => {
-// //         const next = new Set(previous);
-// //         next.add(nodeId);
-// //         return next;
-// //       });
-// //     },
-// //     [nodesById]
-// //   );
-
-// //   const advanceDialogue = useCallback(() => {
-// //     if (!activeNode) return;
-
-// //     const dialogue = activeNode.dialogue ?? [];
-
-// //     // More dialogue remains in the current scenario.
-// //     if (dialogueIdx < dialogue.length - 1) {
-// //       setDialogueIdx((index) => index + 1);
-// //       return;
-// //     }
-
-// //     // Follow the next node automatically for linear scenarios.
-// //     if (activeNode.type === 'linear_next') {
-// //       const nextChoice = activeNode.choices?.[0];
-
-// //       if (nextChoice?.targetNodeId) {
-// //         enterNode(nextChoice.targetNodeId);
-// //       }
-// //     }
-
-// //     // Winning/losing endings should be handled by your existing
-// //     // ending UI and result API logic.
-// //   }, [activeNode, dialogueIdx, enterNode]);
-
-// //   const selectChoice = useCallback(
-// //     (targetNodeId: string) => {
-// //       if (!nodesById[targetNodeId]) {
-// //         setNavigationError(
-// //           'The selected branch points to a missing scenario.'
-// //         );
-// //         return;
-// //       }
-
-// //       enterNode(targetNodeId);
-// //     },
-// //     [nodesById, enterNode]
-// //   );
-
-// //   if (isPending) {
-// //     return (
-// //       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-// //         <p className="text-sm text-gray-500" role="status">
-// //           Loading story...
-// //         </p>
-// //       </main>
-// //     );
-// //   }
-
-// //   // Show the query error when no cached story data is available.
-// //   if (isError && !data) {
-// //     return (
-// //       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-// //         <section
-// //           className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm"
-// //           role="alert"
-// //         >
-// //           <h1 className="text-lg font-semibold text-gray-900">
-// //             Unable to Load Story
-// //           </h1>
-
-// //           <p className="mt-2 text-sm leading-6 text-gray-600">
-// //             We couldn&apos;t load this story right now.
-// //             Please check your connection and try again.
-// //           </p>
-
-// //           <button
-// //             type="button"
-// //             onClick={() => window.location.reload()}
-// //             className="mt-5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
-// //           >
-// //             Try Again
-// //           </button>
-// //         </section>
-// //       </main>
-// //     );
-// //   }
-
-// //   if (!data?.graphNodes?.length) {
-// //     return (
-// //       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-// //         <section
-// //           className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm"
-// //           role="status"
-// //         >
-// //           <div
-// //             className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500"
-// //             aria-hidden="true"
-// //           >
-// //             <svg
-// //               xmlns="http://www.w3.org/2000/svg"
-// //               width="28"
-// //               height="28"
-// //               viewBox="0 0 24 24"
-// //               fill="none"
-// //               stroke="currentColor"
-// //               strokeWidth="1.5"
-// //               strokeLinecap="round"
-// //               strokeLinejoin="round"
-// //             >
-// //               <path d="M8 6h13" />
-// //               <path d="M8 12h13" />
-// //               <path d="M8 18h13" />
-// //               <path d="M3 6h.01" />
-// //               <path d="M3 12h.01" />
-// //               <path d="M3 18h.01" />
-// //             </svg>
-// //           </div>
-
-// //           <h1 className="mt-4 text-lg font-semibold text-gray-900">
-// //             No Story Scenario Available
-// //           </h1>
-
-// //           <p className="mt-2 text-sm leading-6 text-gray-600">
-// //             This story doesn&apos;t have any scenarios available
-// //             at the moment. Please try again later or contact
-// //             your instructor if you believe this is an error.
-// //           </p>
-// //         </section>
-// //       </main>
-// //     );
-// //   }
-
-// //   if (navigationError) {
-// //     return <p role="alert">{navigationError}</p>;
-// //   }
-
-// //   if (!activeNode) {
-// //     return <p>No scenario is available.</p>;
-// //   }
-
-// //   return (
-// //     <main className="w-full h-full">
-// //       <StoryScenePlayer
-// //         scene={activeNode}
-// //         sceneEntryKey={`${languageId}:${sessionId}:${sceneEntryCount}:${activeNode.nodeId}`}
-// //         dialogueIdx={dialogueIdx}
-// //         onSelectNode={selectChoice}
-// //         advanceDialogue={advanceDialogue}
-// //       />
-// //     </main>
-// //   );
-// // }
-
-// 'use client';
-
-// import {
-//   useCallback,
-//   useEffect,
-//   useMemo,
-//   useRef,
-//   useState,
-// } from 'react';
-// import { useParams } from 'next/navigation';
-// import { useQuery } from '@tanstack/react-query';
-
-// import type {
-//   StoryGraphResponse,
-//   StoryScene,
-// } from '@/types/novel/scenario';
-
-// import StoryScenePlayer from '@/components/global/story/scene/StoryScenePlayer';
-// import { useStoryProgressStore } from '@/store/story/story-progress-store';
-
-// interface ServerStoryProgress {
-//   sessionId: string;
-//   currentNodeId: string;
-//   winCount: number;
-//   lossCount: number;
-// }
-
-// async function fetchStoryGraph(
-//   languageId: string,
-//   sessionId: string,
-//   signal: AbortSignal,
-// ): Promise<StoryGraphResponse> {
-//   const response = await fetch(
-//     `/api/client/story/${encodeURIComponent(sessionId)}?languageId=${encodeURIComponent(languageId)}`,
-//     {
-//       method: 'GET',
-//       signal,
-//       cache: 'no-store',
-//     },
-//   );
-
-//   if (!response.ok) {
-//     throw new Error('Could not load this story.');
-//   }
-
-//   return response.json();
-// }
-
-// async function fetchStoryProgress(
-//   sessionId: string,
-//   signal: AbortSignal,
-// ): Promise<ServerStoryProgress> {
-//   const response = await fetch(
-//     `/api/client/story/${encodeURIComponent(sessionId)}/progress`,
-//     {
-//       method: 'GET',
-//       signal,
-//       cache: 'no-store',
-//     },
-//   );
-
-//   if (!response.ok) {
-//     throw new Error('Could not load your story progress.');
-//   }
-
-//   return response.json();
-// }
-
-// async function saveStoryProgress(
-//   sessionId: string,
-//   currentNodeId: string,
-//   options?: {
-//     keepalive?: boolean;
-//   },
-// ): Promise<void> {
-//   const response = await fetch(
-//     `/api/client/story/${encodeURIComponent(sessionId)}/progress`,
-//     {
-//       method: 'PUT',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       keepalive: options?.keepalive ?? false,
-//       body: JSON.stringify({
-//         currentNodeId,
-//       }),
-//     },
-//   );
-
-//   if (!response.ok) {
-//     throw new Error('Could not save story progress.');
-//   }
-// }
-
-// export default function StoryPlayerPage() {
-//   const params = useParams<{
-//     languageId: string;
-//     sessionId: string;
-//   }>();
-
-//   const languageId = params.languageId;
-//   const sessionId = params.sessionId;
-
-//   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-//   const [dialogueIdx, setDialogueIdx] = useState(0);
-//   const [sceneEntryCount, setSceneEntryCount] = useState(0);
-//   const [navigationError, setNavigationError] = useState<string | null>(null);
-
-//   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(
-//     () => new Set(),
-//   );
-
-//   const initializedKeyRef = useRef<string | null>(null);
-//   const inFlightRef = useRef(false);
-
-//   // Zustand selectors.
-//   const localProgress = useStoryProgressStore(
-//     (state) => state.progress[sessionId],
-//   );
-
-//   const isDirty = useStoryProgressStore(
-//     (state) => state.dirty[sessionId] ?? false,
-//   );
-
-//   const hydrateProgress = useStoryProgressStore(
-//     (state) => state.hydrate,
-//   );
-
-//   const setCheckpoint = useStoryProgressStore(
-//     (state) => state.setCheckpoint,
-//   );
-
-//   const markClean = useStoryProgressStore(
-//     (state) => state.markClean,
-//   );
-
-//   // --------------------------------------------------
-//   // Story graph query
-//   // --------------------------------------------------
-
-//   const {
-//     data: storyData,
-//     isPending: graphPending,
-//     isError: graphError,
-//     error: graphErrorValue,
-//     refetch: refetchGraph,
-//   } = useQuery<StoryGraphResponse, Error>({
-//     queryKey: ['story-graph', languageId, sessionId],
-//     enabled: Boolean(languageId && sessionId),
-//     queryFn: ({ signal }) =>
-//       fetchStoryGraph(languageId, sessionId, signal),
-//     staleTime: 30 * 60 * 1000,
-//     refetchOnWindowFocus: true,
-//     retry: 1,
-//   });
-
-//   // --------------------------------------------------
-//   // Initial progress query
-//   // --------------------------------------------------
-
-//   const {
-//     data: serverProgress,
-//     isPending: progressPending,
-//     isError: progressError,
-//     error: progressErrorValue,
-//     refetch: refetchProgress,
-//   } = useQuery<ServerStoryProgress, Error>({
-//     queryKey: ['story-progress', sessionId],
-//     enabled: Boolean(sessionId),
-//     queryFn: ({ signal }) =>
-//       fetchStoryProgress(sessionId, signal),
-//     staleTime: 0,
-//     refetchOnWindowFocus: false,
-//     retry: 1,
-//   });
-
-//   const graph = storyData?.graphNodes ?? [];
-
-//   const nodesById = useMemo(() => {
-//     const lookup: Record<string, StoryScene> = {};
-
-//     for (const node of graph) {
-//       lookup[node.nodeId] = node;
-//     }
-
-//     return lookup;
-//   }, [graph]);
-
-//   const startingNode = useMemo(
-//     () =>
-//       graph.find((node) => node.type === 'starting') ??
-//       graph[0] ??
-//       null,
-//     [graph],
-//   );
-
-//   const activeNode = activeNodeId
-//     ? nodesById[activeNodeId] ?? null
-//     : null;
-
-//   // --------------------------------------------------
-//   // Hydrate Zustand from the server
-//   // --------------------------------------------------
-
-//   useEffect(() => {
-//     if (!serverProgress || !sessionId) return;
-
-//     hydrateProgress({
-//       sessionId: serverProgress.sessionId,
-//       currentNodeId: serverProgress.currentNodeId,
-//       winCount: serverProgress.winCount,
-//       lossCount: serverProgress.lossCount,
-//     });
-//   }, [serverProgress, sessionId, hydrateProgress]);
-
-//   // --------------------------------------------------
-//   // Initialize the player only after both queries finish
-//   // --------------------------------------------------
-
-//   useEffect(() => {
-//     if (
-//       graphPending ||
-//       progressPending ||
-//       graphError ||
-//       progressError ||
-//       !graph.length ||
-//       !startingNode
-//     ) {
-//       return;
-//     }
-
-//     const initializationKey = `${languageId}:${sessionId}`;
-
-//     if (initializedKeyRef.current === initializationKey) {
-//       return;
-//     }
-
-//     const currentLocalProgress =
-//       useStoryProgressStore.getState().progress[sessionId];
-
-//     // Dirty local progress wins over server progress.
-//     const savedNodeId = currentLocalProgress?.currentNodeId;
-
-//     const initialNode =
-//       (savedNodeId ? nodesById[savedNodeId] : undefined) ??
-//       startingNode;
-
-//     initializedKeyRef.current = initializationKey;
-
-//     setActiveNodeId(initialNode.nodeId);
-//     setDialogueIdx(0);
-//     setSceneEntryCount(0);
-//     setNavigationError(null);
-//     setVisitedNodeIds(new Set([initialNode.nodeId]));
-
-//     // If the saved node no longer exists, correct the checkpoint.
-//     if (savedNodeId && !nodesById[savedNodeId]) {
-//       setCheckpoint(sessionId, initialNode.nodeId);
-//     }
-//   }, [
-//     languageId,
-//     sessionId,
-//     graph,
-//     nodesById,
-//     startingNode,
-//     graphPending,
-//     progressPending,
-//     graphError,
-//     progressError,
-//     setCheckpoint,
-//   ]);
-
-//   // --------------------------------------------------
-//   // Enter a node and update the local checkpoint
-//   // --------------------------------------------------
-
-//   const enterNode = useCallback(
-//     (nodeId: string) => {
-//       if (!nodesById[nodeId]) {
-//         setNavigationError(
-//           `Scenario "${nodeId}" was not found in this story.`,
-//         );
-//         return;
-//       }
-
-//       setNavigationError(null);
-//       setActiveNodeId(nodeId);
-//       setDialogueIdx(0);
-//       setSceneEntryCount((count) => count + 1);
-
-//       setVisitedNodeIds((previous) => {
-//         const next = new Set(previous);
-//         next.add(nodeId);
-//         return next;
-//       });
-
-//       // Local update only; the autosave effect persists it later.
-//       setCheckpoint(sessionId, nodeId);
-//     },
-//     [nodesById, sessionId, setCheckpoint],
-//   );
-
-//   // --------------------------------------------------
-//   // Advance dialogue and handle linear nodes
-//   // --------------------------------------------------
-
-//   const advanceDialogue = useCallback(() => {
-//     if (!activeNode) return;
-
-//     const dialogue = activeNode.dialogue ?? [];
-
-//     if (dialogueIdx < dialogue.length - 1) {
-//       setDialogueIdx((index) => index + 1);
-//       return;
-//     }
-
-//     if (activeNode.type === 'linear_next') {
-//       const nextNodeId = activeNode.choices?.[0]?.targetNodeId;
-
-//       if (nextNodeId) {
-//         enterNode(nextNodeId);
-//       }
-
-//       return;
-//     }
-
-//     // Ending processing will be connected to the result API separately.
-//     // Do not count wins/losses just because the final line was clicked.
-//   }, [activeNode, dialogueIdx, enterNode]);
-
-//   const selectChoice = useCallback(
-//     (targetNodeId: string) => {
-//       if (!nodesById[targetNodeId]) {
-//         setNavigationError(
-//           'The selected branch points to a missing scenario.',
-//         );
-//         return;
-//       }
-
-//       enterNode(targetNodeId);
-//     },
-//     [nodesById, enterNode],
-//   );
-
-//   // --------------------------------------------------
-//   // Save dirty progress
-//   // --------------------------------------------------
-
-//   const saveProgress = useCallback(
-//     async (keepalive = false) => {
-//       if (!sessionId || inFlightRef.current) return;
-
-//       const state = useStoryProgressStore.getState();
-
-//       if (!state.dirty[sessionId]) return;
-
-//       const snapshot = state.progress[sessionId];
-
-//       if (!snapshot) return;
-
-//       inFlightRef.current = true;
-
-//       try {
-//         await saveStoryProgress(
-//           sessionId,
-//           snapshot.currentNodeId,
-//           { keepalive },
-//         );
-
-//         // Do not mark clean if the player moved to another node
-//         // while this request was running.
-//         const latest = useStoryProgressStore.getState();
-//         const latestProgress = latest.progress[sessionId];
-
-//         if (
-//           latestProgress?.currentNodeId === snapshot.currentNodeId
-//         ) {
-//           markClean(sessionId);
-//         }
-//       } catch (error) {
-//         // Leave dirty=true so a future save can retry.
-//         console.error('Story progress save failed:', error);
-//       } finally {
-//         inFlightRef.current = false;
-//       }
-//     },
-//     [sessionId, markClean],
-//   );
-
-//   // Autosave every 30 seconds and when the page is hidden.
-//   useEffect(() => {
-//     if (!sessionId) return;
-
-//     const intervalId = window.setInterval(() => {
-//       void saveProgress();
-//     }, 30_000);
-
-//     const handleVisibilityChange = () => {
-//       if (document.visibilityState === 'hidden') {
-//         void saveProgress(true);
-//       }
-//     };
-
-//     const handlePageHide = () => {
-//       void saveProgress(true);
-//     };
-
-//     document.addEventListener(
-//       'visibilitychange',
-//       handleVisibilityChange,
-//     );
-
-//     window.addEventListener('pagehide', handlePageHide);
-
-//     return () => {
-//       window.clearInterval(intervalId);
-
-//       document.removeEventListener(
-//         'visibilitychange',
-//         handleVisibilityChange,
-//       );
-
-//       window.removeEventListener('pagehide', handlePageHide);
-
-//       // Best-effort cleanup save. The browser may terminate this request.
-//       void saveProgress(true);
-//     };
-//   }, [sessionId, saveProgress]);
-
-//   // --------------------------------------------------
-//   // Loading and error states
-//   // --------------------------------------------------
-
-//   if (graphPending || progressPending) {
-//     return (
-//       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-//         <p className="text-sm text-gray-500" role="status">
-//           Loading story...
-//         </p>
-//       </main>
-//     );
-//   }
-
-//   if (graphError || progressError) {
-//     return (
-//       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-//         <section
-//           className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm"
-//           role="alert"
-//         >
-//           <h1 className="text-lg font-semibold text-gray-900">
-//             Unable to Load Story
-//           </h1>
-
-//           <p className="mt-2 text-sm leading-6 text-gray-600">
-//             {graphError
-//               ? graphErrorValue?.message
-//               : progressErrorValue?.message}
-//           </p>
-
-//           <button
-//             type="button"
-//             onClick={() => {
-//               void refetchGraph();
-//               void refetchProgress();
-//             }}
-//             className="mt-5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-//           >
-//             Try Again
-//           </button>
-//         </section>
-//       </main>
-//     );
-//   }
-
-//   if (!graph.length) {
-//     return (
-//       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
-//         <section className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
-//           <h1 className="text-lg font-semibold text-gray-900">
-//             No Story Scenario Available
-//           </h1>
-
-//           <p className="mt-2 text-sm leading-6 text-gray-600">
-//             This story has no available scenarios.
-//           </p>
-//         </section>
-//       </main>
-//     );
-//   }
-
-//   if (navigationError) {
-//     return <p role="alert">{navigationError}</p>;
-//   }
-
-//   if (!activeNode) {
-//     return (
-//       <p role="status">
-//         Preparing story...
-//       </p>
-//     );
-//   }
-
-//   return (
-//     <main className="h-full w-full">
-//       <StoryScenePlayer
-//         scene={activeNode}
-//         sceneEntryKey={`${languageId}:${sessionId}:${sceneEntryCount}:${activeNode.nodeId}`}
-//         dialogueIdx={dialogueIdx}
-//         onSelectNode={selectChoice}
-//         advanceDialogue={advanceDialogue}
-//       />
-//     </main>
-//   );
-// }
 
 'use client';
 
@@ -805,10 +8,14 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useParams } from 'next/navigation';
+
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
 import StoryScenePlayer from '@/components/global/story/scene/StoryScenePlayer';
+import StoryIntroScreen from '@/components/global/story/scene/StoryIntroScreen';
+import StoryEndingScreen from '@/components/global/story/scene/StoryEndingScreen';
+
 import type {
   StoryGraphResponse,
   StoryScene,
@@ -817,7 +24,13 @@ import type {
 import { useStoryProgressStore } from '@/store/story/story-progress-store';
 import type { StoryOutcome } from '@/store/story/story-progress-store';
 
+// -----------------------------------------------------------------------------
+// Constants and types
+// -----------------------------------------------------------------------------
+
 const AUTOSAVE_INTERVAL = 30_000;
+
+type PlatformViewport = 'mobile' | 'tablet' | 'desktop';
 
 interface ProgressResponse {
   sessionId: string;
@@ -825,6 +38,10 @@ interface ProgressResponse {
   winCount: number;
   lossCount: number;
 }
+
+// -----------------------------------------------------------------------------
+// API helper
+// -----------------------------------------------------------------------------
 
 async function fetchJson<T>(
   url: string,
@@ -846,23 +63,21 @@ async function fetchJson<T>(
   return response.json() as Promise<T>;
 }
 
+// -----------------------------------------------------------------------------
+// Story player page
+// -----------------------------------------------------------------------------
+
 export default function StoryPlayerPage() {
+  // Route parameters
   const { languageId, sessionId } = useParams<{
     languageId: string;
     sessionId: string;
   }>();
 
+  const router = useRouter();
   const baseUrl = `/api/client/story/${sessionId}`;
 
-  // Zustand selectors
-  // const progress = useStoryProgressStore(
-  //   (state) => state.progress[sessionId],
-  // );
-
-  // const isDirty = useStoryProgressStore(
-  //   (state) => state.dirty[sessionId] ?? false,
-  // );
-
+  // Zustand actions
   const setCheckpoint = useStoryProgressStore(
     (state) => state.setCheckpoint,
   );
@@ -871,15 +86,12 @@ export default function StoryPlayerPage() {
     (state) => state.hydrate,
   );
 
-  const recordOutcome = useStoryProgressStore(
-    (state) => state.recordOutcome,
-  );
-
-  const markClean = useStoryProgressStore(
-    (state) => state.markClean,
-  );
-
   // Page state
+  const [ending, setEnding] = useState<{
+    outcome: StoryOutcome;
+    node: StoryScene;
+  } | null>(null);
+
   const [activeNodeId, setActiveNodeId] = useState('');
   const [dialogueIdx, setDialogueIdx] = useState(0);
   const [sceneEntryCount, setSceneEntryCount] = useState(0);
@@ -888,18 +100,24 @@ export default function StoryPlayerPage() {
     null,
   );
   const [initialized, setInitialized] = useState(false);
+  const [viewport, setViewport] = useState<PlatformViewport>('mobile');
+  const [hasStarted, setHasStarted] = useState(false);
 
-  // Refs prevent duplicate work.
+  // Refs
   const initializedKeyRef = useRef('');
   const handledEndingRef = useRef('');
   const saveInFlightRef = useRef(false);
   const outcomeInFlightRef = useRef(false);
+
   const pendingOutcomeRef = useRef<{
     outcome: StoryOutcome;
     endingNodeId: string;
   } | null>(null);
 
-  // Fetch the story graph.
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
+
   const graphQuery = useQuery({
     queryKey: ['story-graph', languageId, sessionId],
     queryFn: () =>
@@ -911,7 +129,6 @@ export default function StoryPlayerPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch the user's saved progress.
   const progressQuery = useQuery({
     queryKey: ['story-progress', sessionId],
     queryFn: () =>
@@ -921,12 +138,17 @@ export default function StoryPlayerPage() {
     refetchOnWindowFocus: false,
   });
 
+  // ---------------------------------------------------------------------------
+  // Derived story data
+  // ---------------------------------------------------------------------------
+
   const graph = graphQuery.data?.graphNodes ?? [];
 
   const nodesById = useMemo(
-    () => new Map<string, StoryScene>(
-      graph.map((node) => [node.nodeId, node]),
-    ),
+    () =>
+      new Map<string, StoryScene>(
+        graph.map((node) => [node.nodeId, node]),
+      ),
     [graph],
   );
 
@@ -942,14 +164,50 @@ export default function StoryPlayerPage() {
     ? nodesById.get(activeNodeId) ?? null
     : null;
 
-  // Hydrate from the database without marking the data dirty.
+  // ---------------------------------------------------------------------------
+  // Viewport detection
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+
+    const tabletQuery = window.matchMedia(
+      '(min-width: 768px) and (max-width: 1023px)',
+    );
+
+    const updateViewport = () => {
+      const nextViewport: PlatformViewport = mobileQuery.matches
+        ? 'mobile'
+        : tabletQuery.matches
+          ? 'tablet'
+          : 'desktop';
+
+      setViewport((current) =>
+        current === nextViewport ? current : nextViewport,
+      );
+    };
+
+    updateViewport();
+
+    mobileQuery.addEventListener('change', updateViewport);
+    tabletQuery.addEventListener('change', updateViewport);
+
+    return () => {
+      mobileQuery.removeEventListener('change', updateViewport);
+      tabletQuery.removeEventListener('change', updateViewport);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Progress initialization
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     if (!progressQuery.data) return;
 
     hydrate(progressQuery.data);
   }, [progressQuery.data, hydrate]);
 
-  // Restore the checkpoint once both queries have completed.
   useEffect(() => {
     if (
       graphQuery.isPending ||
@@ -984,9 +242,9 @@ export default function StoryPlayerPage() {
     setSceneEntryCount((count) => count + 1);
     setVisitedNodeIds([restoredNode.nodeId]);
     setNavigationError(null);
+    setHasStarted(false);
     setInitialized(true);
 
-    // Create initial local progress if the API returned no record.
     if (!localProgress && !progressQuery.data) {
       setCheckpoint(sessionId, startingNode.nodeId);
     }
@@ -1004,7 +262,10 @@ export default function StoryPlayerPage() {
     setCheckpoint,
   ]);
 
-  // Navigate to a node and update local progress.
+  // ---------------------------------------------------------------------------
+  // Story navigation
+  // ---------------------------------------------------------------------------
+
   const enterNode = useCallback(
     (nodeId: string) => {
       const node = nodesById.get(nodeId);
@@ -1030,71 +291,10 @@ export default function StoryPlayerPage() {
     [nodesById, sessionId, setCheckpoint],
   );
 
-  // Persist ordinary checkpoints only when dirty.
-  // const saveProgress = useCallback(
-  //   async (keepalive = false) => {
-  //     if (outcomeInFlightRef.current) return;
+  // ---------------------------------------------------------------------------
+  // Progress saving
+  // ---------------------------------------------------------------------------
 
-  //     const store = useStoryProgressStore.getState();
-  //     const current = store.progress[sessionId];
-
-  //     if (
-  //       !current ||
-  //       !store.dirty[sessionId] ||
-  //       saveInFlightRef.current
-  //     ) {
-  //       return;
-  //     }
-
-  //     saveInFlightRef.current = true;
-
-  //     const snapshot = {
-  //       currentNodeId: current.currentNodeId,
-  //       winCount: current.winCount,
-  //       lossCount: current.lossCount,
-  //     };
-
-  //     try {
-  //       const response = await fetch(
-  //         `${baseUrl}/progress`,
-  //         {
-  //           method: 'PUT',
-  //           cache: 'no-store',
-  //           keepalive,
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //           },
-  //           body: JSON.stringify({
-  //             currentNodeId: snapshot.currentNodeId,
-  //           }),
-  //         },
-  //       );
-
-  //       if (!response.ok) {
-  //         throw new Error(`Save failed (${response.status})`);
-  //       }
-
-  //       const latest =
-  //         useStoryProgressStore.getState().progress[sessionId];
-
-  //       // A newer change must remain dirty.
-  //       if (
-  //         latest &&
-  //         latest.currentNodeId === snapshot.currentNodeId &&
-  //         latest.winCount === snapshot.winCount &&
-  //         latest.lossCount === snapshot.lossCount
-  //       ) {
-  //         markClean(sessionId);
-  //       }
-  //     } catch (error) {
-  //       // Keep dirty=true so the next autosave can retry.
-  //       console.error('Checkpoint save failed:', error);
-  //     } finally {
-  //       saveInFlightRef.current = false;
-  //     }
-  //   },
-  //   [baseUrl, sessionId, markClean],
-  // );
   const saveProgress = useCallback(
     async (keepalive = false): Promise<boolean> => {
       if (outcomeInFlightRef.current) return false;
@@ -1146,7 +346,6 @@ export default function StoryPlayerPage() {
           return true;
         }
 
-        // The local checkpoint changed while the save was running.
         return false;
       } catch (error) {
         console.error('Checkpoint save failed:', error);
@@ -1158,54 +357,15 @@ export default function StoryPlayerPage() {
     [baseUrl, sessionId],
   );
 
-  // Retry a pending ending outcome when the autosave timer runs.
-  // const retryPendingOutcome = useCallback(async () => {
-  //   const pending = pendingOutcomeRef.current;
+  // ---------------------------------------------------------------------------
+  // Ending outcome persistence
+  // ---------------------------------------------------------------------------
 
-  //   if (!pending || outcomeInFlightRef.current) return;
-
-  //   outcomeInFlightRef.current = true;
-
-  //   try {
-  //     const response = await fetch(
-  //       `${baseUrl}/progress/outcome`,
-  //       {
-  //         method: 'POST',
-  //         cache: 'no-store',
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //         },
-  //         body: JSON.stringify(pending),
-  //       },
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error(`Outcome save failed (${response.status})`);
-  //     }
-
-  //     // Clear only the outcome that was successfully sent.
-  //     if (pendingOutcomeRef.current === pending) {
-  //       pendingOutcomeRef.current = null;
-  //     }
-
-  //     const latest =
-  //       useStoryProgressStore.getState().progress[sessionId];
-
-  //     if (latest) {
-  //       markClean(sessionId);
-  //     }
-  //   } catch (error) {
-  //     console.error('Outcome save failed; will retry:', error);
-  //   } finally {
-  //     outcomeInFlightRef.current = false;
-  //   }
-  // }, [baseUrl, sessionId, markClean]);
   const retryPendingOutcome = useCallback(async () => {
     const pending = pendingOutcomeRef.current;
 
     if (!pending || outcomeInFlightRef.current) return;
 
-    // Never submit while a checkpoint save is still running.
     if (saveInFlightRef.current) return;
 
     outcomeInFlightRef.current = true;
@@ -1224,7 +384,7 @@ export default function StoryPlayerPage() {
       );
 
       if (!response.ok) {
-        throw new Error(`Outcome save failed (${response.status})`);
+        throw new Error('Outcome save failed');
       }
 
       const saved: ProgressResponse = await response.json();
@@ -1235,73 +395,32 @@ export default function StoryPlayerPage() {
 
       const store = useStoryProgressStore.getState();
 
-      // The API response is authoritative for the checkpoint and counts.
       store.markClean(sessionId);
       store.hydrate(saved);
 
-      setActiveNodeId(saved.currentNodeId);
-      setDialogueIdx(0);
-      setSceneEntryCount((count) => count + 1);
-      setVisitedNodeIds([saved.currentNodeId]);
       setNavigationError(null);
     } catch (error) {
-      // Keep the pending outcome so the timer can retry it.
       console.error('Outcome save failed; will retry:', error);
     } finally {
       outcomeInFlightRef.current = false;
     }
   }, [baseUrl, sessionId]);
 
+  // ---------------------------------------------------------------------------
+  // Story ending
+  // ---------------------------------------------------------------------------
 
-  // Handle an ending: update the UI immediately, then persist the outcome.
-  // const finishStory = useCallback(
-  //   async (outcome: StoryOutcome, endingNodeId: string) => {
-  //     if (!startingNode || outcomeInFlightRef.current) return;
-
-  //     const endingKey =
-  //       `${sessionId}:${endingNodeId}:${sceneEntryCount}`;
-
-  //     if (handledEndingRef.current === endingKey) return;
-
-  //     handledEndingRef.current = endingKey;
-
-  //     const pending = { outcome, endingNodeId };
-  //     pendingOutcomeRef.current = pending;
-
-  //     // Update Zustand immediately: reset checkpoint and increment count.
-  //     recordOutcome(sessionId, startingNode.nodeId, outcome);
-
-  //     // Reset the visible scene to the starting node.
-  //     setActiveNodeId(startingNode.nodeId);
-  //     setDialogueIdx(0);
-  //     setSceneEntryCount((count) => count + 1);
-
-  //     setVisitedNodeIds((previous) =>
-  //       previous.includes(startingNode.nodeId)
-  //         ? previous
-  //         : [...previous, startingNode.nodeId],
-  //     );
-
-  //     await retryPendingOutcome();
-  //   },
-  //   [
-  //     sessionId,
-  //     startingNode,
-  //     sceneEntryCount,
-  //     recordOutcome,
-  //     retryPendingOutcome,
-  //   ],
-  // );
   const finishStory = useCallback(
     async (outcome: StoryOutcome, endingNodeId: string) => {
-      if (!startingNode || outcomeInFlightRef.current) return;
+      if (!startingNode || !activeNode || outcomeInFlightRef.current) {
+        return;
+      }
 
       const endingKey =
         `${sessionId}:${endingNodeId}:${sceneEntryCount}`;
 
       if (handledEndingRef.current === endingKey) return;
 
-      // Make sure the database knows the player reached this ending.
       const checkpointSaved = await saveProgress();
 
       if (!checkpointSaved) {
@@ -1313,6 +432,11 @@ export default function StoryPlayerPage() {
 
       handledEndingRef.current = endingKey;
 
+      setEnding({
+        outcome,
+        node: activeNode,
+      });
+
       pendingOutcomeRef.current = {
         outcome,
         endingNodeId,
@@ -1323,13 +447,17 @@ export default function StoryPlayerPage() {
     [
       sessionId,
       startingNode,
+      activeNode,
       sceneEntryCount,
       saveProgress,
       retryPendingOutcome,
     ],
   );
 
-  // Advance dialogue, follow linear nodes, or process endings.
+  // ---------------------------------------------------------------------------
+  // Dialogue and choice handling
+  // ---------------------------------------------------------------------------
+
   const advanceDialogue = useCallback(() => {
     if (!activeNode) return;
 
@@ -1359,8 +487,6 @@ export default function StoryPlayerPage() {
 
       return;
     }
-
-    // Normal nodes with choices wait for the player to select one.
   }, [activeNode, dialogueIdx, finishStory, enterNode]);
 
   const selectChoice = useCallback(
@@ -1370,7 +496,10 @@ export default function StoryPlayerPage() {
     [enterNode],
   );
 
-  // One timer per mounted page; no continuous polling.
+  // ---------------------------------------------------------------------------
+  // Autosave and page visibility
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     if (!initialized) return;
 
@@ -1396,13 +525,13 @@ export default function StoryPlayerPage() {
       if (!pendingOutcomeRef.current) {
         void saveProgress(true);
       }
-      // Outcome retries on pagehide are not guaranteed to finish.
     };
 
     document.addEventListener(
       'visibilitychange',
       handleVisibilityChange,
     );
+
     window.addEventListener('pagehide', handlePageHide);
 
     return () => {
@@ -1412,17 +541,17 @@ export default function StoryPlayerPage() {
         'visibilitychange',
         handleVisibilityChange,
       );
+
       window.removeEventListener('pagehide', handlePageHide);
 
       void saveProgress(true);
     };
-  }, [
-    initialized,
-    saveProgress,
-    retryPendingOutcome,
-  ]);
+  }, [initialized, saveProgress, retryPendingOutcome]);
 
-  // 1. Still fetching data.
+  // ---------------------------------------------------------------------------
+  // Loading and error states
+  // ---------------------------------------------------------------------------
+
   if (graphQuery.isPending || progressQuery.isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -1431,7 +560,6 @@ export default function StoryPlayerPage() {
     );
   }
 
-  // 2. A request failed.
   if (graphQuery.isError || progressQuery.isError) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3">
@@ -1451,7 +579,6 @@ export default function StoryPlayerPage() {
     );
   }
 
-  // 3. The graph loaded successfully but has no nodes.
   if (graph.length === 0) {
     return (
       <main className="flex min-h-[60vh] w-full items-center justify-center p-6">
@@ -1473,7 +600,6 @@ export default function StoryPlayerPage() {
     );
   }
 
-  // 4. Data is loaded, but checkpoint initialization hasn't finished.
   if (!initialized) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -1482,7 +608,6 @@ export default function StoryPlayerPage() {
     );
   }
 
-  // 5. The graph has nodes, but the active node couldn't be resolved.
   if (!activeNode) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -1491,21 +616,72 @@ export default function StoryPlayerPage() {
     );
   }
 
-  return (
-  <main className="relative w-full h-full">
-    {navigationError && (
-      <p role="alert" className="p-2 text-sm text-red-500">
-        {navigationError}
-      </p>
-    )}
+  // ---------------------------------------------------------------------------
+  // Story introduction
+  // ---------------------------------------------------------------------------
 
-    <StoryScenePlayer
-      scene={activeNode}
-      sceneEntryKey={`${languageId}:${sessionId}:${sceneEntryCount}:${activeNode.nodeId}`}
-      dialogueIdx={dialogueIdx}
-      onSelectNode={selectChoice}
-      advanceDialogue={advanceDialogue}
-    />
-  </main>
-);
+  if (!hasStarted) {
+    return (
+      <StoryIntroScreen
+        title={
+          graphQuery.data?.title ||
+          startingNode?.title ||
+          'Untitled Story'
+        }
+        description={graphQuery.data?.description || ''}
+        image={
+          graphQuery.data?.imageUrl ||
+          startingNode?.bgImage
+        }
+        onStart={() => setHasStarted(true)}
+      />
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Story ending screen
+  // ---------------------------------------------------------------------------
+
+  if (ending) {
+    return (
+      <StoryEndingScreen
+        outcome={ending.outcome === 'win' ? 'win' : 'loss'}
+        title={ending.node.title}
+        image={ending.node.bgImage}
+        onReturn={() => {
+          router.push(`/language/${languageId}/story`);
+        }}
+        onReplay={() => {
+          setEnding(null);
+          handledEndingRef.current = '';
+          pendingOutcomeRef.current = null;
+
+          enterNode(startingNode!.nodeId);
+        }}
+      />
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Main story scene
+  // ---------------------------------------------------------------------------
+
+  return (
+    <main className="relative h-full w-full bg-black">
+      {navigationError && (
+        <p role="alert" className="p-2 text-sm text-red-500">
+          {navigationError}
+        </p>
+      )}
+
+      <StoryScenePlayer
+        scene={activeNode}
+        sceneEntryKey={`${languageId}:${sessionId}:${sceneEntryCount}:${activeNode.nodeId}`}
+        viewport={viewport}
+        dialogueIdx={dialogueIdx}
+        onSelectNode={selectChoice}
+        advanceDialogue={advanceDialogue}
+      />
+    </main>
+  );
 }

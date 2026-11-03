@@ -1,158 +1,3 @@
-
-// "use client";
-
-// import { useEffect, useRef } from "react";
-// import * as THREE from "three";
-// import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-// import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
-
-// export default function VRMViewer({
-//   talking = false,
-// }: {
-//   talking?: boolean;
-// }) {
-//   const mountRef = useRef<HTMLDivElement>(null);
-//   const talkingRef = useRef(talking);
-
-//   useEffect(() => {
-//     talkingRef.current = talking;
-//   }, [talking]);
-
-//   useEffect(() => {
-//     const mount = mountRef.current;
-//     if (!mount) return;
-
-//     let disposed = false;
-//     let vrm: any;
-//     let frame = 0;
-
-//     const scene = new THREE.Scene();
-//     scene.background = new THREE.Color("#111827");
-
-//     const camera = new THREE.PerspectiveCamera(
-//       30,
-//       mount.clientWidth / mount.clientHeight,
-//       0.1,
-//       100
-//     );
-//     camera.position.set(0, 1.35, 3.2);
-//     camera.lookAt(0, 1.25, 0);
-
-//     const renderer = new THREE.WebGLRenderer({
-//       antialias: true,
-//       alpha: false,
-//     });
-
-//     renderer.setPixelRatio(
-//       Math.min(window.devicePixelRatio, 2)
-//     );
-//     renderer.setSize(mount.clientWidth, mount.clientHeight);
-//     mount.appendChild(renderer.domElement);
-
-//     scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 2));
-
-//     const light = new THREE.DirectionalLight(0xffffff, 2);
-//     light.position.set(1, 2, 3);
-//     scene.add(light);
-
-//     const loader = new GLTFLoader();
-//     loader.register(
-//       (parser) => new VRMLoaderPlugin(parser)
-//     );
-
-//     loader.load(
-//       "/models/avatar.vrm",
-//       (gltf) => {
-//         if (disposed) {
-//           VRMUtils.deepDispose(gltf.scene);
-//           return;
-//         }
-
-//         vrm = gltf.userData.vrm;
-
-//         // Center the model's feet at the origin.
-//         const box = new THREE.Box3().setFromObject(vrm.scene);
-//         vrm.scene.position.y = -box.min.y;
-
-//         scene.add(vrm.scene);
-//       },
-//       undefined,
-//       (error) => console.error("Failed to load VRM:", error)
-//     );
-
-//     const clock = new THREE.Clock();
-
-//     function animate() {
-//       frame = requestAnimationFrame(animate);
-
-//       const delta = Math.min(clock.getDelta(), 0.05);
-
-//       if (vrm) {
-//         vrm.update(delta);
-
-//         // Basic mouth movement while the AI speaks.
-//         const mouth =
-//           vrm.expressionManager?.getExpression("aa");
-
-//         if (mouth) {
-//           mouth.weight = THREE.MathUtils.damp(
-//             mouth.weight,
-//             talkingRef.current ? 0.65 : 0,
-//             12,
-//             delta
-//           );
-//         }
-
-//         // Gentle idle movement.
-//         vrm.scene.rotation.y =
-//           Math.sin(clock.elapsedTime * 0.4) * 0.04;
-//       }
-
-//       renderer.render(scene, camera);
-//     }
-
-//     animate();
-
-//     const resizeObserver = new ResizeObserver(() => {
-//       if (!mount.clientWidth || !mount.clientHeight) return;
-
-//       camera.aspect = mount.clientWidth / mount.clientHeight;
-//       camera.updateProjectionMatrix();
-
-//       renderer.setSize(mount.clientWidth, mount.clientHeight);
-//     });
-
-//     resizeObserver.observe(mount);
-
-//     return () => {
-//       disposed = true;
-//       cancelAnimationFrame(frame);
-//       resizeObserver.disconnect();
-
-//       if (vrm) {
-//         scene.remove(vrm.scene);
-//         VRMUtils.deepDispose(vrm.scene);
-//       }
-
-//       renderer.dispose();
-//       renderer.domElement.remove();
-//     };
-//   }, []);
-
-//   return (
-//     <div
-//       ref={mountRef}
-//       style={{
-//         width: "100%",
-//         height: "100%",
-//         minHeight: 320,
-//         overflow: "hidden",
-//         borderRadius: 16,
-//       }}
-//     />
-//   );
-// }
-
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -188,7 +33,25 @@ export default function VRMViewer({
     const frameInterval = 1000 / targetFPS;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#111827");
+
+    const textureLoader = new THREE.TextureLoader();
+
+    textureLoader.load(
+      "https://ik.imagekit.io/uch28of0b/LinguisQuest-public-assets/Sunlit%20Lakeside%20View%20Through%20an%20Open%20Window.png",
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        if (!disposed) {
+          scene.background = texture;
+        } else {
+          texture.dispose();
+        }
+      },
+      undefined,
+      (error) => {
+        console.error("Failed to load avatar background:", error);
+      }
+    );
 
     const camera = new THREE.PerspectiveCamera(
       24,
@@ -323,7 +186,7 @@ export default function VRMViewer({
     );
 
     loader.load(
-      "/models/avatar.vrm",
+      "https://ik.imagekit.io/uch28of0b/LinguisQuest-public-assets/avatar.vrm",
       (gltf) => {
         if (disposed) {
           VRMUtils.deepDispose(gltf.scene);
@@ -354,12 +217,11 @@ export default function VRMViewer({
          */
         const modelHeight = Math.max(size.y, 1);
 
-        // Aim around the upper chest and shoulders.
-        const targetY = modelHeight * 0.82;
+        // Aim slightly lower to show more of the background.
+        const targetY = modelHeight * 0.85;
 
-        // Smaller value = tighter zoom.
-        // This should crop out most of the torso and legs.
-        const visibleHeight = modelHeight * 0.28;
+        // Increase visible height to make the avatar smaller.
+        const visibleHeight = modelHeight * 0.36;
 
         const fovRadians = THREE.MathUtils.degToRad(
           camera.fov

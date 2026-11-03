@@ -1,39 +1,70 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+
 import {
   Loader2,
   X,
   CheckCircle2,
   AlertCircle,
-  Timer,
 } from "lucide-react";
 
 import { ElapsedTimer } from "@/components/global/ElapsedTimer";
+
 import {
   StageData,
   StageMaterialRenderer,
 } from "@/components/global/client/foundation/StageMaterialRenderer";
+
+import { BonusRoundLayout } from "@/components/global/client/foundation/BonusRoundLayout";
+
 import { GlassError } from "@/components/ui/glass-error";
 import { GlassLoading } from "@/components/ui/glass-loading";
 
-const TOTAL_STAGES = 25;
+import {
+  UserStageScore,
+  useSrsStore,
+} from "@/store/foundation/srs-store";
+
+import { useUserStore } from "@/store/user/user-store";
+
 const WRONG_FEEDBACK_DURATION = 1500;
 
 type StageApiResponse = {
   stage: StageData;
   nextStageId: string | null;
+  hasNextStage: boolean;
+  totalStages: number;
 };
 
 type CompleteStageVariables = {
   durationMs: number;
   wrongAttempts: number;
+  action: "complete" | "review";
+};
+
+type StageCompletionResponse = {
+  success: boolean;
+  score: UserStageScore;
+  xpAwarded: number;
+  xp: number;
 };
 
 async function fetchStage(
@@ -62,15 +93,17 @@ async function fetchStage(
   return {
     stage: result.stage,
     nextStageId: result.nextStageId ?? null,
+
+    hasNextStage:
+      typeof result.hasNextStage === "boolean"
+        ? result.hasNextStage
+        : Boolean(result.nextStageId),
+
+    totalStages:
+      typeof result.totalStages === "number"
+        ? result.totalStages
+        : 0,
   };
-}
-
-function formatDuration(ms: number) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 export default function StageLessonPage() {
@@ -82,22 +115,77 @@ export default function StageLessonPage() {
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   const languageId = params.languageId;
   const roadmapId = params.roadmapId;
   const stageId = params.stageId;
 
-  const [lessonStartedAt, setLessonStartedAt] = useState<number | null>(null);
+  // --------------------------------------------------
+  // BONUS MODE
+  // --------------------------------------------------
+
+  const isBonusRound = searchParams.get("mode") === "bonus";
+
+  const returnToStageId = searchParams.get("returnToStageId");
+  const returnToRoadmapId = searchParams.get("returnToRoadmapId");
+
+  // --------------------------------------------------
+  // SRS STORE
+  // --------------------------------------------------
+
+  const ensureLanguageLoaded = useSrsStore(
+    (state) => state.ensureLanguageLoaded
+  );
+
+  const updateScore = useSrsStore(
+    (state) => state.updateScore
+  );
+
+  const claimDueReview = useSrsStore(
+    (state) => state.claimDueReview
+  );
+
+  // Load all SRS scores belonging to this language.
+  // The store organizes them by roadmap internally.
+  useEffect(() => {
+    if (!languageId) return;
+
+    void ensureLanguageLoaded(languageId).catch((error) => {
+      console.error("Failed to load language SRS scores:", error);
+    });
+  }, [languageId, ensureLanguageLoaded]);
+
+  // --------------------------------------------------
+  // USER STORE
+  // --------------------------------------------------
+
+  const setXp = useUserStore((state) => state.setXp);
+
+  // --------------------------------------------------
+  // LESSON STATE
+  // --------------------------------------------------
+
+  const [lessonStartedAt, setLessonStartedAt] = useState<number | null>(
+    null
+  );
+
   const [wrongAttempts, setWrongAttempts] = useState(0);
+
   const [isCurrentAnswerCorrect, setIsCurrentAnswerCorrect] =
     useState(false);
+
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const startedAtRef = useRef<number | null>(null);
+
   const wrongFeedbackTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch and cache the current stage.
+  // --------------------------------------------------
+  // FETCH CURRENT STAGE
+  // --------------------------------------------------
+
   const {
     data,
     isPending,
@@ -106,17 +194,29 @@ export default function StageLessonPage() {
     refetch,
   } = useQuery({
     queryKey: ["stage", languageId, roadmapId, stageId],
+
     queryFn: ({ signal }) =>
       fetchStage(languageId, roadmapId, stageId, signal),
+
     enabled: Boolean(languageId && roadmapId && stageId),
+
     staleTime: 5 * 60 * 1000,
+
     retry: 1,
   });
 
   const stage = data?.stage ?? null;
+
   const nextStageId = data?.nextStageId ?? null;
 
-  // Reset lesson-specific state when a different stage loads.
+  const hasNextStage = data?.hasNextStage ?? false;
+
+  const totalStages = data?.totalStages ?? 0;
+
+  // --------------------------------------------------
+  // RESET LESSON STATE WHEN STAGE CHANGES
+  // --------------------------------------------------
+
   useEffect(() => {
     if (!stage) return;
 
@@ -128,12 +228,14 @@ export default function StageLessonPage() {
     const now = Date.now();
 
     startedAtRef.current = now;
+
     setLessonStartedAt(now);
     setWrongAttempts(0);
     setIsSubmitted(false);
     setIsCurrentAnswerCorrect(false);
 
-    if (nextStageId) {
+    // Only prefetch the next stage during normal lessons.
+    if (!isBonusRound && nextStageId) {
       router.prefetch(
         `/language/${languageId}/foundation/${roadmapId}/${nextStageId}`
       );
@@ -150,24 +252,35 @@ export default function StageLessonPage() {
     nextStageId,
     languageId,
     roadmapId,
+    isBonusRound,
     router,
   ]);
 
-  // Save completion only when the user chooses to continue.
-  const completeStageMutation = useMutation({
+  // --------------------------------------------------
+  // SAVE NORMAL COMPLETION OR BONUS REVIEW
+  // --------------------------------------------------
+
+  const completeStageMutation = useMutation<
+    StageCompletionResponse,
+    Error,
+    CompleteStageVariables
+  >({
     mutationFn: async ({
       durationMs,
       wrongAttempts,
-    }: CompleteStageVariables) => {
+      action,
+    }) => {
       const response = await fetch(
         `/api/client/languages/${encodeURIComponent(languageId)}/roadmaps/${encodeURIComponent(roadmapId)}/stages/${encodeURIComponent(stageId)}`,
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
-            action: "complete",
+            action,
             durationMs,
             wrongAttempts,
           }),
@@ -183,17 +296,34 @@ export default function StageLessonPage() {
         );
       }
 
-      return result;
+      if (
+        !result?.score ||
+        typeof result.xp !== "number" ||
+        typeof result.xpAwarded !== "number"
+      ) {
+        throw new Error(
+          "The server returned an incomplete stage completion response."
+        );
+      }
+
+      return result as StageCompletionResponse;
     },
-    onSuccess: () => {
-      // Refresh cached roadmap progress when it is next viewed.
+
+    onSuccess: (result) => {
+      // Update XP using the latest database value.
+      setXp(result.xp);
+
+      // Invalidate the roadmap containing the current stage.
       void queryClient.invalidateQueries({
         queryKey: ["roadmap-stages", languageId, roadmapId],
       });
     },
   });
 
-  // Check the answer. Incorrect feedback resets automatically.
+  // --------------------------------------------------
+  // CHECK ANSWER
+  // --------------------------------------------------
+
   const handleCheckAnswer = useCallback(() => {
     if (wrongFeedbackTimeoutRef.current) {
       clearTimeout(wrongFeedbackTimeoutRef.current);
@@ -212,6 +342,10 @@ export default function StageLessonPage() {
     }
   }, [isCurrentAnswerCorrect]);
 
+  // --------------------------------------------------
+  // CONTINUE / COMPLETE REVIEW
+  // --------------------------------------------------
+
   const handleNextStage = useCallback(async () => {
     if (
       !stage ||
@@ -227,20 +361,105 @@ export default function StageLessonPage() {
     );
 
     try {
-      await completeStageMutation.mutateAsync({
+      // ==============================================
+      // BONUS REVIEW COMPLETION
+      // ==============================================
+
+      if (isBonusRound) {
+        const result = await completeStageMutation.mutateAsync({
+          action: "review",
+          durationMs,
+          wrongAttempts,
+        });
+
+        // Update this bonus stage's score and recalculate
+        // its next review schedule.
+        updateScore(result.score);
+
+        // Return to the original roadmap and next stage.
+        if (returnToStageId && returnToRoadmapId) {
+          router.push(
+            `/language/${languageId}/foundation/${returnToRoadmapId}/${returnToStageId}`
+          );
+
+          return;
+        }
+
+        // There was no next normal stage.
+        router.push(`/language/${languageId}/foundation`);
+
+        return;
+      }
+
+      // ==============================================
+      // NORMAL STAGE COMPLETION
+      // ==============================================
+
+      // Ensure all stages across this language's roadmaps
+      // are loaded before checking the review queue.
+      //
+      // Normal completion must still be saved if SRS loading fails.
+      try {
+        await ensureLanguageLoaded(languageId);
+      } catch (srsError) {
+        console.error(
+          "Unable to load language SRS scores:",
+          srsError
+        );
+      }
+
+      // Save the normal stage first.
+      const result = await completeStageMutation.mutateAsync({
+        action: "complete",
         durationMs,
         wrongAttempts,
       });
 
-      if (nextStageId) {
+      // Update the completed stage's schedule.
+      updateScore(result.score);
+
+      // ==============================================
+      // CHECK FOR ONE DUE BONUS REVIEW
+      // ==============================================
+
+      const nextBonus = claimDueReview(
+        stage.id,
+        result.score.updatedAt,
+        languageId,
+        Date.now()
+      );
+
+      if (nextBonus) {
+        const bonusUrl = new URLSearchParams({
+          mode: "bonus",
+          returnToStageId: nextStageId ?? "",
+          returnToRoadmapId: roadmapId,
+        });
+
+        // IMPORTANT:
+        // Use the roadmap and stage from the SRS result.
+        // The bonus stage may belong to another roadmap.
+        router.push(
+          `/language/${languageId}/foundation/${nextBonus.roadmapId}/${nextBonus.stageId}?${bonusUrl.toString()}`
+        );
+
+        return;
+      }
+
+      // ==============================================
+      // NO DUE REVIEW: NORMAL NAVIGATION
+      // ==============================================
+
+      if (hasNextStage && nextStageId) {
         router.push(
           `/language/${languageId}/foundation/${roadmapId}/${nextStageId}`
         );
-      } else {
-        router.push(
-          `/language/${languageId}/foundation/${roadmapId}`
-        );
+
+        return;
       }
+
+      // Last normal stage reached.
+      router.push(`/language/${languageId}/foundation`);
     } catch (error) {
       console.error("Failed to save stage progress:", error);
     }
@@ -249,15 +468,45 @@ export default function StageLessonPage() {
     isCurrentAnswerCorrect,
     completeStageMutation,
     wrongAttempts,
-    nextStageId,
+    isBonusRound,
+    returnToStageId,
+    returnToRoadmapId,
+    updateScore,
+    ensureLanguageLoaded,
+    claimDueReview,
     languageId,
     roadmapId,
+    hasNextStage,
+    nextStageId,
     router,
   ]);
 
+  // --------------------------------------------------
+  // EXIT
+  // --------------------------------------------------
+
   const handleExit = useCallback(() => {
-    router.push(`/language/${languageId}/foundation/${roadmapId}`);
-  }, [router, languageId, roadmapId]);
+    // If the student exits a bonus round, return to
+    // the original roadmap when that information exists.
+    const destinationRoadmapId =
+      isBonusRound && returnToRoadmapId
+        ? returnToRoadmapId
+        : roadmapId;
+
+    router.push(
+      `/language/${languageId}/foundation/${destinationRoadmapId}`
+    );
+  }, [
+    router,
+    languageId,
+    roadmapId,
+    isBonusRound,
+    returnToRoadmapId,
+  ]);
+
+  // --------------------------------------------------
+  // LOADING AND ERROR STATES
+  // --------------------------------------------------
 
   if (!languageId || !roadmapId || !stageId) {
     return (
@@ -297,15 +546,49 @@ export default function StageLessonPage() {
     );
   }
 
+  // --------------------------------------------------
+  // SHARED VALUES
+  // --------------------------------------------------
+
   const isNavigating = completeStageMutation.isPending;
 
-  // Assumes stage order is zero-based: 0 through 24.
   const stageNumber = Math.min(
-    TOTAL_STAGES,
+    totalStages || stage.order + 1,
     Math.max(1, stage.order + 1)
   );
 
-  const progressPercentage = (stageNumber / TOTAL_STAGES) * 100;
+  const progressPercentage =
+    totalStages > 0
+      ? Math.min(100, (stageNumber / totalStages) * 100)
+      : 0;
+
+  // --------------------------------------------------
+  // BONUS ROUND LAYOUT
+  // --------------------------------------------------
+
+  if (isBonusRound) {
+    return (
+      <BonusRoundLayout
+        stageTitle={stage.type}
+        isSubmitted={isSubmitted}
+        isAnswerCorrect={isCurrentAnswerCorrect}
+        isSubmitting={isNavigating}
+        onCheckAnswer={handleCheckAnswer}
+        onContinue={handleNextStage}
+        onExit={handleExit}
+      >
+        <StageMaterialRenderer
+          stage={stage}
+          onAnswerChange={setIsCurrentAnswerCorrect}
+        />
+      </BonusRoundLayout>
+    );
+  }
+
+  // --------------------------------------------------
+  // NORMAL STAGE LAYOUT
+  // Existing normal-stage design is preserved.
+  // --------------------------------------------------
 
   return (
     <div className="h-full flex flex-col justify-between select-none">
@@ -323,8 +606,9 @@ export default function StageLessonPage() {
         <div className="flex-1 min-w-0">
           <div className="mb-2 flex justify-between text-xs font-bold text-white">
             <span>
-              Stage {stageNumber} of {TOTAL_STAGES}
+              Stage {stageNumber} of {totalStages}
             </span>
+
             <span>{Math.round(progressPercentage)}%</span>
           </div>
 
@@ -333,7 +617,7 @@ export default function StageLessonPage() {
             role="progressbar"
             aria-label="Lesson progress"
             aria-valuemin={0}
-            aria-valuemax={TOTAL_STAGES}
+            aria-valuemax={totalStages}
             aria-valuenow={stageNumber}
           >
             <div
@@ -378,10 +662,12 @@ export default function StageLessonPage() {
               {isCurrentAnswerCorrect ? (
                 <>
                   <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0" />
+
                   <div>
                     <p className="font-black text-green-300 text-lg">
                       Excellent!
                     </p>
+
                     <p className="text-xs font-bold text-green-200">
                       Your answer is correct.
                     </p>
@@ -390,10 +676,12 @@ export default function StageLessonPage() {
               ) : (
                 <>
                   <AlertCircle className="w-8 h-8 text-rose-400 shrink-0 animate-pulse" />
+
                   <div>
                     <p className="font-black text-rose-300 text-lg">
                       Not quite!
                     </p>
+
                     <p className="text-xs font-bold text-rose-200">
                       Check your response and try again.
                     </p>

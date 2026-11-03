@@ -1,25 +1,27 @@
+// src/store/user-store.ts
 
-import { create } from "zustand"
+import { create } from "zustand";
 
 export interface AppUser {
-  id: string
-  name: string | null
-  imageUrl: string | null
-  xp: number
-  hearts: number
-  maxHearts: number
-  lastHeartRefillAt: string | null
+  id: string;
+  name: string | null;
+  imageUrl: string | null;
+  xp: number;
+  hearts: number;
+  maxHearts: number;
+  lastHeartRefillAt: string | null;
 }
 
-type UserStatus = "idle" | "loading" | "success" | "error"
+type UserStatus = "idle" | "loading" | "success" | "error";
 
 interface UserState {
-  user: AppUser | null
-  status: UserStatus
-  error: string | null
+  user: AppUser | null;
+  status: UserStatus;
+  error: string | null;
 
-  fetchUser: (signal?: AbortSignal) => Promise<void>
-  clearUser: () => void
+  fetchUser: (signal?: AbortSignal) => Promise<void>;
+  setXp: (xp: number) => void;
+  clearUser: () => void;
 }
 
 export const useUserStore = create<UserState>((set) => ({
@@ -28,31 +30,31 @@ export const useUserStore = create<UserState>((set) => ({
   error: null,
 
   fetchUser: async (signal) => {
-    set({ status: "loading", error: null })
+    set({ status: "loading", error: null });
 
     try {
       const response = await fetch("/api/client/me", {
         credentials: "same-origin",
         signal,
-      })
+      });
 
       if (!response.ok) {
         throw new Error(
           response.status === 401
             ? "Unauthorized"
             : "Failed to fetch user"
-        )
+        );
       }
 
-      const user: AppUser = await response.json()
+      const user: AppUser = await response.json();
 
       set({
         user,
         status: "success",
         error: null,
-      })
+      });
     } catch (error) {
-      if (signal?.aborted) return
+      if (signal?.aborted) return;
 
       set({
         user: null,
@@ -61,9 +63,22 @@ export const useUserStore = create<UserState>((set) => ({
           error instanceof Error
             ? error.message
             : "Something went wrong",
-      })
+      });
     }
   },
+
+  // Synchronize XP with the value returned by the API.
+  setXp: (xp) =>
+    set((state) => {
+      if (!state.user) return state;
+
+      return {
+        user: {
+          ...state.user,
+          xp,
+        },
+      };
+    }),
 
   clearUser: () =>
     set({
@@ -71,4 +86,4 @@ export const useUserStore = create<UserState>((set) => ({
       status: "idle",
       error: null,
     }),
-}))
+}));

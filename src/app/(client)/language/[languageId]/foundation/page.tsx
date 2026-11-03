@@ -886,14 +886,14 @@ export default function LanguageRoadmapPage() {
                       </span>
 
                       {isCompleted && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-emerald-200">
                           <CheckCircle2 className="h-3 w-3" />
                           COMPLETED
                         </span>
                       )}
 
                       {isCurrent && (
-                        <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold">
+                        <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-amber-200">
                           IN PROGRESS
                         </span>
                       )}
