@@ -78,7 +78,7 @@ export default function StoryEditorPage() {
     if (!workspaceId) return;
 
     fetchNodes(workspaceId);
-    fetchAssets(workspaceId);
+    fetchAssets(workspaceId, languageId);
   }, [workspaceId, fetchNodes, fetchAssets]);
 
   // Autosave the currently selected workspace.

@@ -18,7 +18,10 @@ interface AssetState {
   assets: Asset[];
   isLoading: boolean;
   setAssets: (assets: Asset[]) => void;
-  fetchAssets: (sessionId: string) => Promise<void>;
+  fetchAssets: (
+    sessionId: string,
+    languageId: string,
+  ) => Promise<void>;
   addAsset: (
     file: File,
     sessionId: string,
@@ -119,8 +122,13 @@ export const useAssetStore = create<AssetState>((set) => ({
   setAssets: (assets) => set({ assets }),
 
   // 1. READ ASSETS
-  fetchAssets: async (sessionId) => {
-    if (!sessionId || ['undefined', 'null'].includes(sessionId)) {
+  fetchAssets: async (sessionId, languageId) => {
+    if (
+      !sessionId ||
+      ['undefined', 'null'].includes(sessionId) ||
+      !languageId ||
+      ['undefined', 'null'].includes(languageId)
+    ) {
       set({ assets: [], isLoading: false });
       return;
     }
@@ -129,12 +137,13 @@ export const useAssetStore = create<AssetState>((set) => ({
 
     try {
       const assets = await apiRequest<Asset[]>(
-        `/api/admin/novel/assets/get?sessionId=${encodeURIComponent(sessionId)}`,
+        `/api/admin/novel/assets/get?sessionId=${encodeURIComponent(sessionId)}&languageId=${encodeURIComponent(languageId)}`,
       );
 
-      set({ assets: Array.isArray(assets) ? assets : [] });
+      set({
+        assets: Array.isArray(assets) ? assets : [],
+      });
     } catch (error) {
-      // Background page loads should not spam notifications.
       console.error('Failed to fetch workspace assets:', error);
     } finally {
       set({ isLoading: false });

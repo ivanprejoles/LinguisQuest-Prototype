@@ -69,7 +69,7 @@ export default function StorageTab({ sessionId }: StorageTabProps) {
   const sfxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchAssets(sessionId);
+    fetchAssets(sessionId, languageId);
   }, [sessionId, fetchAssets]);
 
   const backgrounds = assets.filter(a => a.rowType === 'background_image');
