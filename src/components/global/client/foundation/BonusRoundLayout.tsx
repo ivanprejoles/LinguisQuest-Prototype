@@ -34,7 +34,7 @@ export function BonusRoundLayout({
   onExit,
 }: BonusRoundLayoutProps) {
   return (
-    <div className="min-h-full flex flex-col bg-gradient-to-b from-amber-50 via-orange-50 to-yellow-50 text-slate-800 select-none">
+    <div className="min-h-full flex flex-col bg-transparent text-slate-800 select-none">
       {/* Bonus Header */}
       <header className="w-full max-w-2xl mx-auto px-5 sm:px-6 pt-5 sm:pt-7">
         <div className="flex items-center justify-between gap-3">
@@ -86,7 +86,7 @@ export function BonusRoundLayout({
 
       {/* Activity */}
       <main className="w-full max-w-xl mx-auto px-5 sm:px-6 flex-1 flex flex-col justify-center py-6">
-        <div className="rounded-3xl bg-white border border-amber-100 shadow-sm p-4 sm:p-6">
+        <div className="rounded-3xl border border-amber-100 shadow-sm p-4 sm:p-6">
           {children}
         </div>
       </main>
