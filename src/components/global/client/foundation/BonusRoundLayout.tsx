@@ -86,7 +86,7 @@ export function BonusRoundLayout({
 
       {/* Activity */}
       <main className="w-full max-w-xl mx-auto px-5 sm:px-6 flex-1 flex flex-col justify-center py-6">
-        <div className="rounded-3xl border border-amber-100 shadow-sm p-4 sm:p-6">
+        <div className="rounded-3xl p-4 sm:p-6">
           {children}
         </div>
       </main>
@@ -98,7 +98,7 @@ export function BonusRoundLayout({
             ? isAnswerCorrect
               ? "bg-emerald-50 border-emerald-200"
               : "bg-rose-50 border-rose-200"
-            : "bg-white border-amber-100"
+            : ""
         }`}
       >
         <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
