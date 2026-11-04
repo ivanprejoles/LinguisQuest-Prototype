@@ -1,5 +1,3 @@
-// src/types/scenario.ts
-
 export type RoutePathType = 'starting'|'normal' | 'linear_next' | 'winning_ending' | 'deadend';
 
 export interface ChoicePath {

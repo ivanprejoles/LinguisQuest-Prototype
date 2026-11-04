@@ -11,60 +11,6 @@ type RouteContext = {
   }>;
 };
 
-// // GET: Fetch the current stage and the next stage ID.
-// export async function GET(
-//   _request: Request,
-//   { params }: RouteContext
-// ) {
-//   try {
-//     const { languageId, roadmapId, stageId } = await params;
-
-//     const stage = await prisma.stage.findFirst({
-//       where: {
-//         id: stageId,
-//         roadmapId,
-//         roadmap: { is: { languageId } },
-//       },
-//       select: {
-//         id: true,
-//         type: true,
-//         order: true,
-//         question: true,
-//         payload: true,
-//         roadmapId: true,
-//       },
-//     });
-
-//     if (!stage) {
-//       return NextResponse.json(
-//         { error: "Stage not found." },
-//         { status: 404 }
-//       );
-//     }
-
-//     const nextStage = await prisma.stage.findFirst({
-//       where: {
-//         roadmapId,
-//         order: { gt: stage.order },
-//       },
-//       orderBy: { order: "asc" },
-//       select: { id: true },
-//     });
-
-//     return NextResponse.json({
-//       stage,
-//       nextStageId: nextStage?.id ?? null,
-//     });
-//   } catch (error) {
-//     console.error("GET stage error:", error);
-
-//     return NextResponse.json(
-//       { error: "Failed to load stage." },
-//       { status: 500 }
-//     );
-//   }
-// }
-// GET: Fetch the current stage, next stage, and roadmap stage count.
 export async function GET(
   _request: Request,
   { params }: RouteContext

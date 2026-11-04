@@ -8,8 +8,6 @@ export type ActivityType =
 
 export type AudioMode = "recorded" | "speech";
 
-// RIGHT
-// SENTENCE BUILDER
 export interface SentenceBuilderPayload {
   type: "sentenceBuilder";
   question: string;
@@ -50,7 +48,6 @@ export interface FillInTheBlankPayload {
   isValid: boolean;
 }
 
-// TAP WHAT YOU HEAR
 export interface TapWhatYouHearPayload {
   type: "tapWhatYouHear";
   question: string;
@@ -63,7 +60,6 @@ export interface TapWhatYouHearPayload {
   isValid: boolean;
 }
 
-// MULTIPLE CHOICE
 export interface MultipleChoiceOption {
   id: string;
   text: string;
@@ -79,10 +75,9 @@ export interface MultipleChoicePayload {
   isValid: boolean;
 }
 
-// MATCHING PAIRS
 export interface MatchingPairItem {
   id: string;
-  sourceText: string; // Target language word/phrase
+  sourceText: string;
   targetText: string; // Translation (e.g., English)
 }
 

@@ -114,26 +114,61 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
+    if (!id) {
+      return NextResponse.json(
+        { error: "Missing roadmap ID." },
+        { status: 400 }
+      );
+    }
+
+    // Validate MongoDB ObjectId
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid roadmap ID." },
+        { status: 400 }
+      );
+    }
+
+    // Check if roadmap exists
     const existingRoadmap = await prisma.roadmap.findUnique({
       where: { id },
     });
 
-    // Clean up file in ImageKit prior to deleting database record
-    if (existingRoadmap?.imageFileId) {
+    if (!existingRoadmap) {
+      return NextResponse.json(
+        { error: "Roadmap not found." },
+        { status: 404 }
+      );
+    }
+
+    // Delete roadmap (and cascading related records)
+    await prisma.roadmap.delete({
+      where: { id },
+    });
+
+    // Clean up ImageKit after successful database deletion
+    if (existingRoadmap.imageFileId) {
       try {
         await imagekit.deleteFile(existingRoadmap.imageFileId);
       } catch (imgError) {
-        console.error("Failed to delete image from ImageKit:", imgError);
+        console.error(
+          "Failed to delete roadmap image from ImageKit:",
+          imgError
+        );
       }
     }
 
-    await prisma.roadmap.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Roadmap deleted successfully.",
+    });
+
   } catch (error) {
+    console.error("DELETE roadmap error:", error);
+
     return NextResponse.json(
-      { error: "Failed to delete roadmap" },
+      { error: "Failed to delete roadmap." },
       { status: 500 }
     );
   }

@@ -53,14 +53,6 @@ export default function PreviewEditorTab({
   // 3. Convert nodes dictionary to array and filter out activeNode
   const availableTargetNodes = Object.values(nodes).filter((n) => n.id !== activeNode?.id);
 
-  // useEffect(() => {
-  //   if (activeNode?.id !== prevNodeRef.current?.id) {
-  //     setActivePrevNode(prevNodeRef.current);
-  //     setDialogueIdx(0);
-  //     setEditingLineIdx(null);
-  //   }
-  //   prevNodeRef.current = activeNode;
-  // }, [activeNode]);
   useEffect(() => {
     if (activeNode?.id !== prevNodeRef.current?.id) {
       setActivePrevNode(prevNodeRef.current);
@@ -134,17 +126,6 @@ export default function PreviewEditorTab({
 
   return (
     <div className="space-y-5 flex flex-col  select-text pb-6 text-[11px] w-full max-w-full overflow-x-hidden">
-      
-      {/* <EmulatorSection 
-        activeNode={activeNode} 
-        fx={fx} 
-        dialogueIdx={dialogueIdx} 
-        onSelectNode={onSelectNode} 
-        advanceDialogue={advanceDialogue} 
-        modalViewport={modalViewport} 
-        setModalViewport={setModalViewport} 
-        modalViewportSizing={modalViewportSizing} 
-      /> */}
       <EmulatorSection
         activeNode={activeNode}
         fx={fx}

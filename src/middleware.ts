@@ -1,10 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// ------------------------------------------
-// 1. ROUTE DEFINITIONS
-// ------------------------------------------
-
 const isPublicRoute = (pathname: string) =>
   pathname === "/" ||
   /^\/sign-in($|\/)/.test(pathname) ||
@@ -32,10 +28,6 @@ const isApiRequest = (pathname: string) =>
   pathname.startsWith("/trpc/") ||
   pathname === "/trpc";
 
-// ------------------------------------------
-// 2. CLERK MIDDLEWARE
-// ------------------------------------------
-
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const { userId, sessionClaims } = await auth();
@@ -45,10 +37,6 @@ export default clerkMiddleware(async (auth, req) => {
   const role = (
     sessionClaims?.metadata as { role?: string } | undefined
   )?.role;
-
-  // ----------------------------------------
-  // 3. PUBLIC ROUTES AND REDIRECTION
-  // ----------------------------------------
 
   if (userId && isPublicRoute(pathname) && !isApi) {
     if (role === "admin") {
@@ -66,10 +54,6 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // ----------------------------------------
-  // 4. REQUIRE LOGIN
-  // ----------------------------------------
-
   if (!userId) {
     if (isApi) {
       return NextResponse.json(
@@ -83,10 +67,6 @@ export default clerkMiddleware(async (auth, req) => {
 
     return NextResponse.redirect(signInUrl);
   }
-
-  // ----------------------------------------
-  // 5. ADMIN PROTECTION
-  // ----------------------------------------
 
   if (isAdminRoute(pathname)) {
     if (role !== "admin") {
@@ -105,10 +85,6 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // ----------------------------------------
-  // 6. USER PROTECTION
-  // ----------------------------------------
-
   if (isUserRoute(pathname)) {
     if (role === "admin") {
       if (isApi) {
@@ -126,16 +102,8 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // ----------------------------------------
-  // 7. OTHER AUTHENTICATED ROUTES
-  // ----------------------------------------
-
   return NextResponse.next();
 });
-
-// ------------------------------------------
-// 8. MATCHER
-// ------------------------------------------
 
 export const config = {
   matcher: [
