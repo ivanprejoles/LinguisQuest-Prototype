@@ -140,7 +140,7 @@ export function BonusRoundLayout({
             )}
 
             {!isSubmitted && (
-              <p className="text-sm font-bold text-slate-500">
+              <p className="text-sm font-bold text-white">
                 Take your time. You've got this!
               </p>
             )}
