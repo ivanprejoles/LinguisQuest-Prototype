@@ -93,11 +93,11 @@ export function BonusRoundLayout({
 
       {/* Answer Feedback and Actions */}
       <footer
-        className={`w-full border-t px-5 sm:px-6 py-5 sm:py-6 transition-colors ${
+        className={`w-full  px-5 sm:px-6 py-5 sm:py-6 transition-colors ${
           isSubmitted
             ? isAnswerCorrect
-              ? "bg-emerald-50 border-emerald-200"
-              : "bg-rose-50 border-rose-200"
+              ? "bg-emerald-50 border-t border-emerald-200"
+              : "bg-rose-50 border-t border-rose-200"
             : ""
         }`}
       >
