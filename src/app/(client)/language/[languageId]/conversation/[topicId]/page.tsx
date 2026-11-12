@@ -255,11 +255,12 @@ export default function ConversationPage() {
   const [talking, setTalking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [error, setError] = useState("");
+  
 
   const [voicePlaybackIssue, setVoicePlaybackIssue] = useState<
     "interaction-required" | "unavailable" | null
   >(null);
-
+  const [chatOpen, setChatOpen] = useState(false);
   // ---------------------------------------------------------------------------
   // Refs
   // ---------------------------------------------------------------------------
@@ -449,6 +450,15 @@ export default function ConversationPage() {
       }
     },
     [voiceEnabled, stopAudio],
+  );
+
+  const replayMessage = useCallback(
+    (text: string) => {
+      if (!voiceLanguage || !text.trim() || !voiceEnabled) return;
+
+      void speak(text, voiceLanguage);
+    },
+    [voiceLanguage, voiceEnabled, speak],
   );
 
   // ---------------------------------------------------------------------------
@@ -996,8 +1006,9 @@ const retryMessage = useCallback(
   // Main interface
   // ---------------------------------------------------------------------------
 
+  
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#e9ede4] text-[#403b30]">
+    <main className="relative flex h-[calc(100dvh-var(--header-height,4.25rem))] min-h-0 flex-col overflow-hidden bg-[#e9ede4] text-[#403b30]">
       {/* Storybook background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -right-40 -top-40 size-[32rem] rounded-full bg-[#d5dfcf]/60 blur-3xl" />
@@ -1011,67 +1022,52 @@ const retryMessage = useCallback(
           }}
         />
       </div>
-
-      {/* Header */}
-      <header className="relative z-10 border-b border-[#c5cbb8] bg-[#e9ede4]/95 shadow-[0_4px_18px_rgba(70,65,45,0.08)] backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-8">
-          <div className="min-w-0">
+      {/* Main layout */}
+      <div className="relative z-10 mx-auto grid h-full min-h-0 w-full max-w-7xl grid-cols-1 overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-[minmax(0,1fr)] lg:gap-5 lg:px-8 lg:py-4">
+        {/* Avatar / story guide */}
+        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-[#c5cbb8] bg-gradient-to-br from-[#e4eadc] via-[#dce4d4] to-[#e9dfc9] shadow-[0_12px_35px_rgba(70,65,45,0.12)] lg:min-h-[500px]">
+  
+          {/* Compact floating header */}
+          <div className="relative z-20 flex items-start gap-2 px-3 pt-3 sm:px-6 sm:pt-5">
+            {/* Back button */}
             <Link
               href={`/language/${encodeURIComponent(languageId)}/conversation`}
-              className="inline-flex items-center gap-2 text-xs font-medium text-[#68765d] transition hover:text-[#34402e]"
+              aria-label="Back to your adventures"
+              className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#c5cbb8] bg-[#f2e7ca]/95 text-lg text-[#68765d] shadow-sm backdrop-blur-md transition hover:bg-[#e8d9b5] active:scale-95 sm:size-10"
             >
-              <span>←</span>
-              <span>Your adventures</span>
+              ←
             </Link>
 
-            <div className="mt-2 flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#c5ad78] bg-[#f2e7ca] text-xl text-[#a77a32]">
-                📖
-              </span>
+            {/* Topic title and description */}
+            <div className="min-w-0 flex-1 px-1 text-center">
+              <h2 className="truncate text-sm font-bold leading-tight text-[#72552b] sm:text-base">
+                {topic.title}
+              </h2>
 
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#96743a]">
-                  Today's chapter
-                </p>
-                <h1 className="truncate text-lg font-bold tracking-tight text-[#403b30] sm:text-xl">
-                  {topic.title}
-                </h1>
-              </div>
+              <p className="mx-auto mt-1 line-clamp-2 max-w-md text-[10px] leading-relaxed text-[#68765d] sm:text-xs">
+                {topic.description ||
+                  "Take your time, explore new words, and enjoy the conversation."}
+              </p>
             </div>
+
+            {/* Mute / unmute */}
+            <button
+              type="button"
+              onClick={toggleVoice}
+              aria-pressed={voiceEnabled}
+              aria-label={voiceEnabled ? "Mute voice" : "Unmute voice"}
+              title={voiceEnabled ? "Mute voice" : "Unmute voice"}
+              className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#c5ad78] bg-[#f2e7ca]/95 text-base shadow-sm backdrop-blur-md transition hover:bg-[#e8d9b5] active:scale-95 sm:size-10 sm:text-lg"
+            >
+              {voiceEnabled ? "🔊" : "🔇"}
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={toggleVoice}
-            aria-pressed={voiceEnabled}
-            className="flex shrink-0 items-center gap-2 rounded-full border border-[#c5ad78] bg-[#f2e7ca] px-3 py-2 text-xs font-semibold text-[#403b30] transition hover:border-[#a77a32] hover:bg-[#e8d9b5]"
-          >
-            <span>{voiceEnabled ? "🔊" : "🔇"}</span>
-            <span className="hidden sm:inline">
-              {voiceEnabled ? "Voice on" : "Voice off"}
-            </span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main layout */}
-      <div className="relative z-10 mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:py-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
-
-        {/* Avatar / story guide */}
-        <section className="flex min-h-[360px] flex-col overflow-hidden rounded-[24px] border border-[#c5cbb8] bg-gradient-to-br from-[#e4eadc] via-[#dce4d4] to-[#e9dfc9] shadow-[0_12px_35px_rgba(70,65,45,0.12)] sm:min-h-[500px]">
-          <div className="flex items-center justify-between gap-3 px-6 pt-5">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#96743a]">
-                Your language companion
-              </p>
-              {/* <h2 className="mt-1 text-base font-bold text-[#403b30]">
-                A little adventure awaits
-              </h2> */}
-            </div>
-
-            <div className="flex items-center gap-2 rounded-full border border-[#c5cbb8] bg-[#f2e7ca] px-3 py-1.5">
+          {/* Compact conversation status */}
+          <div className="relative z-10 flex justify-center px-3 pt-2 sm:pt-3">
+            <div className="inline-flex max-w-[85%] items-center gap-2 rounded-full border border-[#c5cbb8]/80 bg-[#f2e7ca]/90 px-3 py-1 shadow-sm backdrop-blur-md">
               <span
-                className={`size-2 rounded-full ${
+                className={`size-1.5 shrink-0 rounded-full ${
                   talking
                     ? "animate-pulse bg-[#a77a32]"
                     : listening
@@ -1083,221 +1079,201 @@ const retryMessage = useCallback(
                           : "bg-[#9aa47a]"
                 }`}
               />
-              <span className="text-[10px] font-medium text-[#59634f]">
+              <span className="truncate text-[10px] font-medium text-[#59634f] sm:text-xs">
                 {statusText}
               </span>
             </div>
           </div>
 
           {/* Avatar */}
-          <div className="relative min-h-[280px] flex-1 overflow-hidden p-1">
+          <div className="relative min-h-0 flex-1 overflow-hidden p-1">
             <div className="pointer-events-none absolute inset-x-8 bottom-5 h-16 rounded-[50%] bg-[#e9e5d6]/40 blur-2xl" />
             <VRMViewer talking={talking} />
-          </div>
-
-          {/* Story information */}
-          <div className="mx-5 mb-5 rounded-xl border border-[#c5cbb8] bg-[#f2e7ca] p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 text-lg text-[#a77a32]">✨</span>
-              <div>
-                <p className="text-xs font-bold text-[#72552b]">
-                  Your little learning moment
-                </p>
-                <p className="mt-1 text-xs leading-5 text-[#59634f]">
-                  {topic.description ||
-                    "Take your time, explore new words, and enjoy the conversation."}
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
         {/* Conversation panel */}
-        <section className="flex min-h-[560px] flex-col overflow-hidden rounded-[24px] border border-[#c5ad78] bg-gradient-to-b from-[#fff4d3] via-[#f5e6bd] to-[#e9d3a0] shadow-[0_12px_35px_rgba(70,65,45,0.12)]">
+        <section
+          className={`
+            absolute inset-x-1 bottom-1 z-30
+            flex max-h-[72%] min-h-0 flex-col overflow-hidden
+            rounded-2xl border border-[#c5ad78]
+            bg-gradient-to-b from-[#fff4d3] via-[#f5e6bd] to-[#e9d3a0]
+            shadow-[0_12px_35px_rgba(70,65,45,0.25)]
+            transition-all duration-300
+            lg:relative lg:inset-auto lg:z-auto
+            lg:h-full lg:max-h-full lg:min-h-0
+            lg:rounded-[24px]
+          `}
+        >
+          {/* Conversation heading / mobile chat toggle */}
+          <div className="flex items-center justify-between gap-2 border-b border-[#d2bd8e] bg-[#eee2c3] px-3 py-2.5 sm:px-5 sm:py-4 lg:px-6">
+            <button
+              type="button"
+              onClick={() => setChatOpen((open) => !open)}
+              aria-expanded={chatOpen}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left lg:pointer-events-none"
+            >
+              <span className="text-base sm:text-lg">💬</span>
 
-          {/* Conversation heading */}
-          <div className="flex items-center justify-between gap-3 border-b border-[#d2bd8e] bg-[#eee2c3] px-5 py-4 sm:px-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">💬</span>
-                <h2 className="text-base font-bold text-[#403b30]">
+              <div className="min-w-0">
+                <h2 className="text-xs font-bold text-[#403b30] sm:text-base">
                   Your conversation
                 </h2>
+                <p className="hidden text-xs text-[#756448] sm:block">
+                  Every new word is part of your journey.
+                </p>
               </div>
-              <p className="mt-1 text-xs text-[#756448]">
-                Every new word is part of your journey.
-              </p>
-            </div>
+
+              <span className="ml-auto text-xs text-[#806536] lg:hidden">
+                {chatOpen ? "▼" : "▲"}
+              </span>
+            </button>
 
             <button
               type="button"
               onClick={handleRestart}
               disabled={!languageReady || isBusy}
-              className="rounded-full border border-[#c5ad78] bg-[#f8efd9] px-4 py-2 text-xs font-semibold text-[#72552b] transition hover:bg-[#e8d9b5] disabled:cursor-not-allowed disabled:opacity-40"
+              className="shrink-0 rounded-full border border-[#c5ad78] bg-[#f8efd9] px-2.5 py-1.5 text-[10px] font-semibold text-[#72552b] transition hover:bg-[#e8d9b5] disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 sm:py-2 sm:text-xs"
             >
               ↻ Restart
             </button>
           </div>
 
-          {/* Voice playback notice */}
-          {voiceEnabled && voicePlaybackIssue && (
-            <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#d2bd8e] bg-[#f8efd9] px-4 py-3">
-              <p className="text-xs leading-5 text-[#72552b]">
-                {voicePlaybackIssue === "interaction-required"
-                  ? "Your browser needs a click before it can play audio."
-                  : "Voice is temporarily unavailable, but your conversation is safe."}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  const lastVoice = lastVoiceRef.current;
-                  if (lastVoice) {
-                    void speak(lastVoice.text, lastVoice.language);
-                  }
-                }}
-                className="shrink-0 rounded-xl border border-[#c5ad78] bg-[#fff8e8] px-3 py-2 text-sm text-[#403b30] transition hover:bg-[#e8d9b5]"
-              >
-                Play voice
-              </button>
-            </div>
-          )}
-
-          {/* Messages */}
+          {/* Collapsible conversation content */}
           <div
-            aria-live="polite"
-            aria-relevant="additions text"
-            className="flex-1 space-y-6 overflow-y-auto bg-gradient-to-b from-[#f8efd9] to-[#eee0bd] p-4 sm:p-6"
+            className={`
+              min-h-0 flex-1 flex-col overflow-hidden
+              ${chatOpen ? "flex" : "hidden"}
+              lg:flex
+            `}
           >
-            {!languageReady && (
-              <p className="py-4 text-center text-sm text-[#756448]">
-                Preparing your language...
-              </p>
-            )}
+            {/* Voice playback notice */}
+            {voiceEnabled && voicePlaybackIssue && (
+              <div className="mx-3 mt-3 flex items-center justify-between gap-2 rounded-xl border border-[#d2bd8e] bg-[#f8efd9] px-3 py-2 sm:mx-4 sm:px-4 sm:py-3">
+                <p className="text-[10px] leading-relaxed text-[#72552b] sm:text-xs">
+                  {voicePlaybackIssue === "interaction-required"
+                    ? "Your browser needs a click before it can play audio."
+                    : "Voice is temporarily unavailable, but your conversation is safe."}
+                </p>
 
-            {starting && savedMessages.length === 0 && (
-              <div className="flex justify-start">
-                <div className="rounded-xl rounded-bl-sm border border-[#d2bd8e] bg-[#fff4d3] px-5 py-3 text-sm text-[#72552b]">
-                  Your guide is preparing the first chapter...
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lastVoice = lastVoiceRef.current;
+                    if (lastVoice) {
+                      void speak(lastVoice.text, lastVoice.language);
+                    }
+                  }}
+                  className="shrink-0 rounded-lg border border-[#c5ad78] bg-[#fff8e8] px-2 py-1.5 text-[10px] text-[#403b30] transition hover:bg-[#e8d9b5] sm:px-3 sm:py-2 sm:text-sm"
+                >
+                  Play voice
+                </button>
               </div>
             )}
 
-            {/* Saved messages */}
-            {savedMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex flex-col ${
-                  message.role === "user" ? "items-end" : "items-start"
-                }`}
-              >
+            {/* Messages */}
+            <div
+              aria-live="polite"
+              aria-relevant="additions text"
+              className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain bg-gradient-to-b from-[#f8efd9] to-[#eee0bd] p-3 sm:space-y-6 sm:p-6"
+            >
+              {!languageReady && (
+                <p className="py-4 text-center text-xs text-[#756448] sm:text-sm">
+                  Preparing your language...
+                </p>
+              )}
+
+              {starting && savedMessages.length === 0 && (
+                <div className="flex justify-start">
+                  <div className="rounded-xl rounded-bl-sm border border-[#d2bd8e] bg-[#fff4d3] px-3 py-2.5 text-xs text-[#72552b] sm:px-5 sm:py-3 sm:text-sm">
+                    Your guide is preparing the first chapter...
+                  </div>
+                </div>
+              )}
+
+              {savedMessages.map((message) => (
                 <div
-                  className={`max-w-[88%] whitespace-pre-wrap break-words rounded-[18px] border px-4 py-3.5 text-sm leading-7 shadow-sm sm:px-5 ${
-                    message.role === "user"
-                      ? "rounded-br-sm border-[#b8c5a8] bg-gradient-to-br from-[#e0e8d5] to-[#cbd8bd] text-[#34402e]"
-                      : "rounded-bl-sm border-[#d2b775] bg-gradient-to-br from-[#fff8e8] to-[#f0dfb5] text-[#403b30]"
+                  key={message.id}
+                  className={`flex items-end gap-2 ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#96743a]">
-                    {message.role === "user" ? "You" : "Your story guide"}
-                  </p>
-                  {message.content}
-                </div>
-
-                {/* Failed response and retry button */}
-                {message.role === "user" && message.status === "failed" && (
-                  <div className="mt-2 w-full max-w-[88%] rounded-xl border border-[#d5a18c] bg-[#f8e9e1] p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#92563f]">
-                      <span>⚠</span>
-                      <span>Tutor response failed</span>
-                    </div>
-
-                    <p className="mt-2 text-sm leading-6 text-[#594337]">
-                      {error ||
-                        "Your message was saved, but your tutor couldn't respond this time. You can try again."}
+                  <div
+                    className={`max-w-[88%] whitespace-pre-wrap break-words rounded-[18px] border px-3 py-2.5 text-xs leading-6 shadow-sm sm:px-5 sm:py-3.5 sm:text-sm sm:leading-7 ${
+                      message.role === "user"
+                        ? "rounded-br-sm border-[#b8c5a8] bg-gradient-to-br from-[#e0e8d5] to-[#cbd8bd] text-[#34402e]"
+                        : "rounded-bl-sm border-[#d2b775] bg-gradient-to-br from-[#fff8e8] to-[#f0dfb5] text-[#403b30]"
+                    }`}
+                  >
+                    <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#96743a] sm:mb-1.5 sm:text-[10px]">
+                      {message.role === "user" ? "You" : "Your story guide"}
                     </p>
+                    {message.content}
+                  </div>
 
-                    <p className="mt-2 text-[11px] text-[#80634f]">
-                      Your original message is safe. Retrying will not duplicate it.
-                    </p>
-
+                  {message.role === "assistant" && (
                     <button
                       type="button"
-                      onClick={() => void retryMessage(message.id)}
-                      disabled={isBusy}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#a77a32] bg-[#78805b] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#68734e] disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => replayMessage(message.content)}
+                      disabled={!voiceEnabled || !languageReady}
+                      aria-label="Replay this AI message"
+                      title="Replay audio"
+                      className="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#c5ad78] bg-[#fff8e8] text-sm text-[#806536] shadow-sm transition hover:border-[#a77a32] hover:bg-[#e8d9b5] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:size-9"
                     >
-                      ↻ Retry response
+                      <span aria-hidden="true">🔊</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
+              ))}
 
-                {/* Pending status */}
-                {message.role === "user" && message.status === "pending" && (
-                  <p className="mt-2 mr-2 text-[11px] text-[#756448]">
-                    Sending your message...
-                  </p>
-                )}
-
-                {/* Retrying status */}
-                {message.role === "user" && message.status === "retrying" && (
-                  <p className="mt-2 mr-2 inline-flex items-center gap-2 text-[11px] text-[#756448]">
-                    <span className="size-2 animate-pulse rounded-full bg-[#a77a32]" />
-                    Trying to reach your tutor again...
-                  </p>
-                )}
-              </div>
-            ))}
-
-            {/* AI typing indicator */}
-            {sending && (
-              <div className="flex justify-start">
-                <div className="rounded-xl rounded-bl-sm border border-[#d2bd8e] bg-[#fff4d3] px-5 py-3.5 text-sm text-[#72552b] shadow-sm">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="flex gap-1">
-                      <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32]" />
-                      <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32] [animation-delay:120ms]" />
-                      <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32] [animation-delay:240ms]" />
+              {sending && (
+                <div className="flex justify-start">
+                  <div className="rounded-xl rounded-bl-sm border border-[#d2bd8e] bg-[#fff4d3] px-3 py-2.5 text-xs text-[#72552b] shadow-sm sm:px-5 sm:py-3.5 sm:text-sm">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="flex gap-1">
+                        <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32] [animation-delay:120ms]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-[#a77a32] [animation-delay:240ms]" />
+                      </span>
+                      Thinking of a reply...
                     </span>
-                    Thinking of a reply...
-                  </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* General errors */}
-            {error && !failedMessage && (
-              <div
-                role="alert"
-                className="rounded-xl border border-[#d5a18c] bg-[#f8e9e1] px-4 py-3 text-sm leading-6 text-[#92563f]"
-              >
-                <div className="flex items-start gap-2">
-                  <span>⚠</span>
-                  <p>{error}</p>
+              {error && !failedMessage && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-[#d5a18c] bg-[#f8e9e1] px-3 py-2.5 text-xs leading-5 text-[#92563f] sm:px-4 sm:py-3 sm:text-sm sm:leading-6"
+                >
+                  <div className="flex items-start gap-2">
+                    <span>⚠</span>
+                    <p>{error}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Retry explanation */}
-            {failedMessage && !sending && (
-              <div className="rounded-xl border border-dashed border-[#c5ad78] bg-[#f8efd9] px-4 py-3 text-center">
-                <p className="text-xs leading-5 text-[#72552b]">
-                  Retry your tutor's response above to continue your adventure.
-                </p>
-              </div>
-            )}
+              {failedMessage && !sending && (
+                <div className="rounded-xl border border-dashed border-[#c5ad78] bg-[#f8efd9] px-3 py-2.5 text-center sm:px-4 sm:py-3">
+                  <p className="text-[10px] leading-5 text-[#72552b] sm:text-xs">
+                    Retry your tutor's response above to continue your adventure.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Composer */}
           <form
             onSubmit={handleSubmit}
-            className="border-t border-[#d2bd8e] bg-[#eee2c3] p-4 sm:p-5"
+            className="shrink-0 border-t border-[#d2bd8e] bg-[#eee2c3] p-2.5 sm:p-4 lg:p-5"
           >
             <label htmlFor="conversation-message" className="sr-only">
               Your message
             </label>
 
-            <div className="flex items-end gap-2 rounded-xl border border-[#c5ad78] bg-[#fff8e8] p-2 transition focus-within:border-[#a77a32] focus-within:ring-1 focus-within:ring-[#c5ad78]">
-
+            <div className="flex items-end gap-1.5 rounded-xl border border-[#c5ad78] bg-[#fff8e8] p-1.5 sm:gap-2 sm:p-2">
               {/* Microphone */}
               <button
                 type="button"
@@ -1307,7 +1283,7 @@ const retryMessage = useCallback(
                 }
                 aria-label={listening ? "Stop microphone" : "Use microphone"}
                 title={listening ? "Stop listening" : "Speak your message"}
-                className={`flex size-10 shrink-0 items-center justify-center rounded-lg text-lg transition disabled:cursor-not-allowed disabled:opacity-30 ${
+                className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-base transition disabled:cursor-not-allowed disabled:opacity-30 sm:size-10 sm:text-lg ${
                   listening
                     ? "bg-[#f2d9cd] text-[#92563f]"
                     : "text-[#68765d] hover:bg-[#e9ede4]"
@@ -1345,7 +1321,7 @@ const retryMessage = useCallback(
                     event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                className="max-h-36 min-h-10 flex-1 resize-y bg-transparent px-2 py-2.5 text-sm text-[#403b30] outline-none placeholder:text-[#9b927f] disabled:cursor-not-allowed disabled:opacity-50"
+                className="max-h-28 min-h-9 min-w-0 flex-1 resize-y bg-transparent px-2 py-2 text-xs text-[#403b30] outline-none placeholder:text-[#9b927f] disabled:cursor-not-allowed disabled:opacity-50 sm:max-h-36 sm:min-h-10 sm:py-2.5 sm:text-sm"
               />
 
               {/* Send button */}
@@ -1358,7 +1334,7 @@ const retryMessage = useCallback(
                   isBusy ||
                   Boolean(unresolvedMessage)
                 }
-                className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#a77a32] bg-[#78805b] text-lg text-white shadow-sm transition hover:bg-[#68734e] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#a77a32] bg-[#78805b] text-base text-white shadow-sm transition hover:bg-[#68734e] disabled:cursor-not-allowed disabled:opacity-40 sm:size-10 sm:text-lg"
                 aria-label="Send message"
               >
                 {sending ? "…" : "➤"}
@@ -1366,14 +1342,14 @@ const retryMessage = useCallback(
             </div>
 
             {/* Composer footer */}
-            <div className="mt-3 flex items-center justify-between gap-3 px-1">
-              <p className="text-[10px] text-[#756448]">
+            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 sm:mt-3 sm:gap-3">
+              <p className="min-w-0 truncate text-[9px] text-[#756448] sm:text-[10px]">
                 {failedMessage
                   ? "Your previous message is saved. Retry above to continue."
                   : "Enter to send · Shift + Enter for a new line"}
               </p>
 
-              <p className="text-[10px] tabular-nums text-[#756448]">
+              <p className="shrink-0 text-[9px] tabular-nums text-[#756448] sm:text-[10px]">
                 {input.length}/{MAX_MESSAGE_LENGTH}
               </p>
             </div>
@@ -1382,5 +1358,4 @@ const retryMessage = useCallback(
       </div>
     </main>
   );
-
 }

@@ -236,60 +236,65 @@ export default function LanguageRoadmapPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:px-6 sm:pt-8">
       {/* Header */}
-      <section className="relative mb-7 overflow-hidden rounded-3xl border border-white/15 bg-[#10182A]/30 p-5 shadow-xl shadow-black/20 backdrop-blur-xl sm:p-7">
+      <section className="relative mb-5 overflow-hidden rounded-2xl border border-white/15 bg-[#10182A]/30 p-3.5 shadow-xl shadow-black/20 backdrop-blur-xl sm:mb-7 sm:rounded-3xl sm:p-7">
+        {/* Background effects */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-amber-400/10 blur-3xl"
+          className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-amber-400/10 blur-3xl sm:h-48 sm:w-48"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-indigo-400/10 blur-3xl"
+          className="pointer-events-none absolute -bottom-20 -left-16 h-32 w-32 rounded-full bg-indigo-400/10 blur-3xl sm:h-40 sm:w-40"
         />
 
         <div className="relative">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/[0.08] px-3 py-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200">
-              Your adventure begins
-            </span>
+          {/* Introduction */}
+          <div>
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-amber-300/20 bg-amber-300/[0.08] px-2.5 py-1 sm:mb-3 sm:gap-2 sm:px-3 sm:py-1.5">
+              <Sparkles className="h-3 w-3 text-amber-300 sm:h-3.5 sm:w-3.5" />
+              <span className="text-[8px] font-bold uppercase tracking-[0.16em] text-amber-200 sm:text-[10px] sm:tracking-[0.22em]">
+                Your adventure begins
+              </span>
+            </div>
+
+            <h1 className="text-[22px] font-black leading-tight tracking-tight text-white drop-shadow-sm sm:text-4xl">
+              Choose your next quest!
+            </h1>
+
+            <p className="mt-1.5 max-w-lg text-[11px] leading-4 text-slate-200/80 sm:mt-2 sm:text-base sm:leading-6">
+              Learn step by step, earn XP, and unlock new adventures.
+            </p>
           </div>
 
-          <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-sm sm:text-4xl">
-            Choose your next quest!
-          </h1>
+          {/* Compact experience summary */}
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-2.5 sm:mt-6 sm:gap-4 sm:rounded-2xl sm:p-4">
 
-          <p className="mt-2 max-w-lg text-sm leading-6 text-slate-200/80 sm:text-base">
-            Learn step by step, earn XP, and unlock new adventures.
-          </p>
-
-          {/* Experience summary */}
-          <div className="mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:gap-4 sm:p-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-200/25 bg-gradient-to-br from-amber-300 to-amber-600 text-[#211708] shadow-lg shadow-amber-950/20">
-                <Trophy className="h-5 w-5" />
+            {/* XP */}
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-200/25 bg-gradient-to-br from-amber-300 to-amber-600 text-[#211708] shadow-lg shadow-amber-950/20 sm:h-11 sm:w-11 sm:rounded-xl">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
 
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:text-xs">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-slate-300 sm:text-xs sm:tracking-[0.16em]">
                   Your experience
                 </p>
-                <p className="mt-0.5 truncate text-xl font-black tabular-nums text-amber-200 sm:text-2xl">
+                <p className="mt-0.5 truncate text-base font-black tabular-nums text-amber-200 sm:text-2xl">
                   {xp.toLocaleString()}{" "}
-                  <span className="text-sm font-bold">XP</span>
+                  <span className="text-[10px] font-bold sm:text-sm">XP</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex min-w-0 items-center justify-end gap-3 border-l border-white/10 pl-3 text-right sm:pl-4">
-              <div className="min-w-0">
-                <p className="text-xl font-black tabular-nums text-white sm:text-2xl">
+            {/* Completed quests */}
+            <div className="flex min-w-0 items-center justify-end gap-2 border-l border-white/10 pl-2 sm:gap-3 sm:pl-4">
+              <div className="min-w-0 text-right">
+                <p className="text-base font-black tabular-nums text-white sm:text-2xl">
                   {completedCount}
                   <span className="mx-1 text-slate-400">/</span>
-                  <span className="text-slate-300">
-                    {roadmaps.length}
-                  </span>
+                  <span className="text-slate-300">{roadmaps.length}</span>
                 </p>
-                <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-300 sm:text-xs">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-slate-300 sm:text-xs sm:tracking-[0.12em]">
                   Quests completed
                 </p>
               </div>
@@ -297,6 +302,7 @@ export default function LanguageRoadmapPage() {
           </div>
         </div>
       </section>
+
 
       {roadmapProgress.length === 0 ? (
         <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white p-10 text-center">
@@ -325,243 +331,519 @@ export default function LanguageRoadmapPage() {
             const color = getRoadmapColor(roadmap.order);
             const expanded = expandedId === roadmap.id;
 
-            return (
-              <article
-                key={roadmap.id}
-                style={
-                  isLocked
-                    ? undefined
-                    : {
-                        backgroundColor: color.background,
-                        borderColor: color.border,
-                        boxShadow: `0 5px 0 ${color.shadow}`,
-                      }
-                }
-                className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-200 ${
-                  isLocked
-                    ? "border-slate-200 bg-slate-200 text-slate-500"
-                    : "text-white"
-                }`}
+            // return (
+            //   <article
+            //     key={roadmap.id}
+            //     style={
+            //       isLocked
+            //         ? undefined
+            //         : {
+            //             backgroundColor: color.background,
+            //             borderColor: color.border,
+            //             boxShadow: `0 5px 0 ${color.shadow}`,
+            //           }
+            //     }
+            //     className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-200 ${
+            //       isLocked
+            //         ? "border-slate-200 bg-slate-200 text-slate-500"
+            //         : "text-white"
+            //     }`}
+            //   >
+            //     <div className="relative flex min-h-[178px]">
+            //       <div className="relative z-10 flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+            //         <div className="mb-2 flex flex-wrap items-center gap-2">
+            //           <span
+            //             className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+            //               isLocked ? "text-slate-500" : "text-white/80"
+            //             }`}
+            //           >
+            //             Section {index + 1}
+            //           </span>
+
+            //           {isCompleted && (
+            //             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-emerald-200">
+            //               <CheckCircle2 className="h-3 w-3" />
+            //               COMPLETED
+            //             </span>
+            //           )}
+
+            //           {isCurrent && (
+            //             <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-amber-200">
+            //               IN PROGRESS
+            //             </span>
+            //           )}
+
+            //           {isLocked && (
+            //             <span className="inline-flex items-center gap-1 rounded-full bg-slate-300/70 px-2 py-1 text-[10px] font-extrabold text-slate-600">
+            //               <LockKeyhole className="h-3 w-3" />
+            //               LOCKED
+            //             </span>
+            //           )}
+            //         </div>
+
+            //         <h2 className="max-w-[250px] text-lg font-black leading-tight sm:text-xl">
+            //           {roadmap.title}
+            //         </h2>
+
+            //         <p
+            //           className={`mt-1 line-clamp-2 max-w-[260px] text-xs font-semibold leading-5 ${
+            //             isLocked ? "text-slate-500" : "text-white/80"
+            //           }`}
+            //         >
+            //           {roadmap.description ||
+            //             "A new adventure awaits. Keep learning and level up!"}
+            //         </p>
+
+            //         <div className="mt-4 max-w-[270px]">
+            //           <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-extrabold">
+            //             <span className="flex items-center gap-1">
+            //               {isLocked ? (
+            //                 <LockKeyhole className="h-3 w-3" />
+            //               ) : (
+            //                 <Check className="h-3 w-3" />
+            //               )}
+
+            //               {isLocked
+            //                 ? `${requiredXP - xp} more XP to unlock`
+            //                 : `${completedStages} / ${stageCount} stages`}
+            //             </span>
+
+            //             {!isLocked && <span>{progress}%</span>}
+            //           </div>
+
+            //           <div
+            //             className={`h-2.5 overflow-hidden rounded-full ${
+            //               isLocked ? "bg-slate-300" : "bg-black/20"
+            //             }`}
+            //           >
+            //             <div
+            //               className={`h-full rounded-full transition-all duration-500 ${
+            //                 isLocked ? "bg-slate-400" : ""
+            //               }`}
+            //               style={{
+            //                 width: `${isLocked ? 0 : progress}%`,
+            //                 ...(isLocked
+            //                   ? {}
+            //                   : { backgroundColor: color.progress }),
+            //               }}
+            //             />
+            //           </div>
+            //         </div>
+
+            //         <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+            //           {isLocked ? (
+            //             <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-300/80 px-3 py-2 text-[10px] font-black text-slate-600">
+            //               <LockKeyhole className="h-3 w-3" />
+            //               NEED {requiredXP} XP
+            //             </span>
+            //           ) : (
+            //             <>
+            //               <button
+            //                 onClick={() => openRoadmap(roadmap.id)}
+            //                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-white/90 active:translate-y-px"
+            //               >
+            //                 {isCompleted
+            //                   ? "Review"
+            //                   : completedStages > 0
+            //                     ? "Continue"
+            //                     : "Start quest"}
+            //                 <ArrowRight className="h-3 w-3" />
+            //               </button>
+
+            //               <button
+            //                 onClick={() =>
+            //                   setExpandedId(
+            //                     expanded ? null : roadmap.id
+            //                   )
+            //                 }
+            //                 aria-expanded={expanded}
+            //                 aria-controls={`roadmap-details-${roadmap.id}`}
+            //                 className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 hover:bg-white/10"
+            //               >
+            //                 Details
+            //                 <ChevronDown
+            //                   className={`h-3 w-3 transition-transform ${
+            //                     expanded ? "rotate-180" : ""
+            //                   }`}
+            //                 />
+            //               </button>
+            //             </>
+            //           )}
+            //         </div>
+            //       </div>
+
+            //       {/* Illustration */}
+            //       <div className="relative flex w-[34%] shrink-0 items-center justify-center sm:w-[36%]">
+            //         <div
+            //           className="absolute inset-2 rounded-2xl"
+            //           style={{
+            //             backgroundColor: isLocked
+            //               ? "rgba(148, 163, 184, 0.25)"
+            //               : color.soft,
+            //           }}
+            //         />
+
+            //         {roadmap.imageUrl ? (
+            //           <img
+            //             src={roadmap.imageUrl}
+            //             alt=""
+            //             loading="lazy"
+            //             className={`relative z-10 max-h-32 w-full object-contain p-1 sm:max-h-36 ${
+            //               isLocked
+            //                 ? "grayscale opacity-50"
+            //                 : "drop-shadow-md"
+            //             }`}
+            //           />
+            //         ) : (
+            //           <div
+            //             className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-3xl ${
+            //               isLocked
+            //                 ? "bg-slate-300 text-slate-500"
+            //                 : "bg-white/20 text-white"
+            //             }`}
+            //           >
+            //             {isLocked ? (
+            //               <LockKeyhole className="h-9 w-9" />
+            //             ) : isCompleted ? (
+            //               <Trophy className="h-10 w-10" />
+            //             ) : (
+            //               <BookOpen className="h-10 w-10" />
+            //             )}
+            //           </div>
+            //         )}
+
+            //         {isCompleted && (
+            //           <div className="absolute bottom-3 right-3 z-20">
+            //             <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-green-300 bg-gradient-to-b from-lime-300 via-green-400 to-green-600 shadow-[0_4px_0_#15803d,0_6px_10px_rgba(0,0,0,0.25)]">
+            //               <div className="absolute left-1 top-1 h-2 w-3 -rotate-12 rounded-full bg-white/70 blur-[1px]" />
+            //               <Check className="relative z-10 mt-0.5 h-5 w-5 stroke-[4] text-white drop-shadow-[0_2px_1px_rgba(0,80,30,0.65)]" />
+            //             </div>
+            //           </div>
+            //         )}
+
+            //         {isLocked && (
+            //           <div className="absolute inset-0 z-20 flex items-center justify-center">
+            //             <div className="rounded-full bg-slate-500/80 p-3 text-white shadow-md">
+            //               <LockKeyhole className="h-5 w-5" />
+            //             </div>
+            //           </div>
+            //         )}
+            //       </div>
+            //     </div>
+
+            //     {/* Expandable details */}
+            //     {expanded && !isLocked && (
+            //       <div
+            //         id={`roadmap-details-${roadmap.id}`}
+            //         className="border-t border-white/20 bg-black/10 px-4 py-4 sm:px-5"
+            //       >
+            //         <p className="text-sm font-semibold leading-6 text-white/95">
+            //           {roadmap.description ||
+            //             `Explore ${stageCount} stages and earn ${XP_PER_STAGE} XP for every stage you complete.`}
+            //         </p>
+
+            //         <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+            //           <span className="rounded-lg bg-white/15 px-3 py-2">
+            //             <BookOpen className="mr-1 inline h-3.5 w-3.5" />
+            //             {stageCount} stages
+            //           </span>
+
+            //           <span className="rounded-lg bg-white/15 px-3 py-2">
+            //             <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            //             {XP_PER_STAGE} XP per stage
+            //           </span>
+            //         </div>
+
+            //         {isCompleted && (
+            //           <button
+            //             onClick={() => openEvaluation(roadmap.id)}
+            //             className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-yellow-300 px-4 py-3 text-sm font-black text-yellow-950 shadow-[0_3px_0_#ca8a04] transition hover:bg-yellow-200 active:translate-y-px active:shadow-none"
+            //           >
+            //             <Trophy className="h-4 w-4" />
+            //             Take evaluation
+            //             <ArrowRight className="h-4 w-4" />
+            //           </button>
+            //         )}
+            //       </div>
+            //     )}
+            //   </article>
+            // );
+
+return (
+  <article
+    key={roadmap.id}
+    style={
+      isLocked
+        ? undefined
+        : {
+            backgroundColor: color.background,
+            borderColor: color.border,
+            boxShadow: `0 5px 0 ${color.shadow}`,
+          }
+    }
+    className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-200 ${
+      isLocked
+        ? "border-slate-200 bg-slate-200 text-slate-500"
+        : "text-white"
+    }`}
+  >
+    <div className="relative flex flex-col sm:min-h-[220px] sm:flex-row">
+
+      {/* Illustration */}
+      <div className="relative flex h-44 w-full shrink-0 items-center justify-center overflow-hidden sm:order-2 sm:h-auto sm:min-h-[220px] sm:w-[40%] md:w-[42%] lg:w-[44%]">
+        <div
+          className="absolute inset-2 rounded-2xl sm:inset-3"
+          style={{
+            backgroundColor: isLocked
+              ? "rgba(148, 163, 184, 0.25)"
+              : color.soft,
+          }}
+        />
+
+        {roadmap.imageUrl ? (
+          <img
+            src={roadmap.imageUrl}
+            alt=""
+            loading="lazy"
+            className={`absolute inset-0 z-10 h-full w-full object-cover ${
+              isLocked
+                ? "grayscale opacity-50"
+                : "drop-shadow-md"
+            }`}
+          />
+        ) : (
+          <div
+            className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-3xl sm:h-24 sm:w-24 ${
+              isLocked
+                ? "bg-slate-300 text-slate-500"
+                : "bg-white/20 text-white"
+            }`}
+          >
+            {isLocked ? (
+              <LockKeyhole className="h-9 w-9 sm:h-11 sm:w-11" />
+            ) : isCompleted ? (
+              <Trophy className="h-10 w-10 sm:h-12 sm:w-12" />
+            ) : (
+              <BookOpen className="h-10 w-10 sm:h-12 sm:w-12" />
+            )}
+          </div>
+        )}
+
+        {isCompleted && (
+          <div className="absolute bottom-3 right-3 z-20 sm:bottom-4 sm:right-4">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-green-300 bg-gradient-to-b from-lime-300 via-green-400 to-green-600 shadow-[0_4px_0_#15803d,0_6px_10px_rgba(0,0,0,0.25)]">
+              <div className="absolute left-1 top-1 h-2 w-3 -rotate-12 rounded-full bg-white/70 blur-[1px]" />
+              <Check className="relative z-10 mt-0.5 h-5 w-5 stroke-[4] text-white drop-shadow-[0_2px_1px_rgba(0,80,30,0.65)]" />
+            </div>
+          </div>
+        )}
+
+        {isLocked && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center">
+            <div className="rounded-full bg-slate-500/80 p-3 text-white shadow-md">
+              <LockKeyhole className="h-5 w-5" />
+            </div>
+          </div>
+        )}
+
+        {/* Mobile section and status badges */}
+        <div className="absolute left-4 top-4 z-30 flex flex-wrap items-center gap-2 sm:hidden">
+          <span
+            className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+              isLocked ? "text-slate-600" : "text-white"
+            }`}
+          >
+            Section {index + 1}
+          </span>
+
+          {isCompleted && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-emerald-200">
+              <CheckCircle2 className="h-3 w-3" />
+              COMPLETED
+            </span>
+          )}
+
+          {isCurrent && (
+            <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-amber-200">
+              IN PROGRESS
+            </span>
+          )}
+
+          {isLocked && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-300/70 px-2 py-1 text-[10px] font-extrabold text-slate-600">
+              <LockKeyhole className="h-3 w-3" />
+              LOCKED
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col p-4 sm:order-1 sm:p-5">
+
+        {/* Desktop section and status badges */}
+        <div className="mb-2 hidden flex-wrap items-center gap-2 sm:flex">
+          <span
+            className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+              isLocked ? "text-slate-500" : "text-white/80"
+            }`}
+          >
+            Section {index + 1}
+          </span>
+
+          {isCompleted && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-emerald-200">
+              <CheckCircle2 className="h-3 w-3" />
+              COMPLETED
+            </span>
+          )}
+
+          {isCurrent && (
+            <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-amber-200">
+              IN PROGRESS
+            </span>
+          )}
+
+          {isLocked && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-300/70 px-2 py-1 text-[10px] font-extrabold text-slate-600">
+              <LockKeyhole className="h-3 w-3" />
+              LOCKED
+            </span>
+          )}
+        </div>
+
+        <h2 className="line-clamp-2 break-words text-lg font-black leading-tight sm:text-xl">
+          {roadmap.title}
+        </h2>
+
+        <p
+          className={`hidden sm:block mt-1 line-clamp-2 text-xs font-semibold leading-5 ${
+            isLocked ? "text-slate-500" : "text-white/80"
+          }`}
+        >
+          {roadmap.description ||
+            "A new adventure awaits. Keep learning and level up!"}
+        </p>
+
+        {/* Progress */}
+        <div className="mt-4 w-full sm:max-w-[340px]">
+          <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-extrabold">
+            <span className="flex min-w-0 items-center gap-1">
+              {isLocked ? (
+                <LockKeyhole className="h-3 w-3 shrink-0" />
+              ) : (
+                <Check className="h-3 w-3 shrink-0" />
+              )}
+
+              <span className="truncate">
+                {isLocked
+                  ? `${requiredXP - xp} more XP to unlock`
+                  : `${completedStages} / ${stageCount} stages`}
+              </span>
+            </span>
+
+            {!isLocked && <span className="shrink-0">{progress}%</span>}
+          </div>
+
+          <div
+            className={`h-2.5 overflow-hidden rounded-full ${
+              isLocked ? "bg-slate-300" : "bg-black/20"
+            }`}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                isLocked ? "bg-slate-400" : ""
+              }`}
+              style={{
+                width: `${isLocked ? 0 : progress}%`,
+                ...(isLocked
+                  ? {}
+                  : { backgroundColor: color.progress }),
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+          {isLocked ? (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-300/80 px-3 py-2 text-[10px] font-black text-slate-600">
+              <LockKeyhole className="h-3 w-3" />
+              NEED {requiredXP} XP
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={() => openRoadmap(roadmap.id)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-white/90 active:translate-y-px"
               >
-                <div className="relative flex min-h-[178px]">
-                  <div className="relative z-10 flex min-w-0 flex-1 flex-col p-4 sm:p-5">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`text-[10px] font-black uppercase tracking-[0.16em] ${
-                          isLocked ? "text-slate-500" : "text-white/80"
-                        }`}
-                      >
-                        Section {index + 1}
-                      </span>
+                {isCompleted
+                  ? "Review"
+                  : completedStages > 0
+                    ? "Continue"
+                    : "Start quest"}
+                <ArrowRight className="h-3 w-3" />
+              </button>
 
-                      {isCompleted && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-emerald-200">
-                          <CheckCircle2 className="h-3 w-3" />
-                          COMPLETED
-                        </span>
-                      )}
+              <button
+                onClick={() =>
+                  setExpandedId(expanded ? null : roadmap.id)
+                }
+                aria-expanded={expanded}
+                aria-controls={`roadmap-details-${roadmap.id}`}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 hover:bg-white/10"
+              >
+                Details
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform ${
+                    expanded ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
 
-                      {isCurrent && (
-                        <span className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-extrabold text-amber-200">
-                          IN PROGRESS
-                        </span>
-                      )}
+    {/* Expandable details */}
+    {expanded && !isLocked && (
+      <div
+        id={`roadmap-details-${roadmap.id}`}
+        className="border-t border-white/20 bg-black/10 px-4 py-4 sm:px-5"
+      >
+        <p className="text-sm font-semibold leading-6 text-white/95">
+          {roadmap.description ||
+            `Explore ${stageCount} stages and earn ${XP_PER_STAGE} XP for every stage you complete.`}
+        </p>
 
-                      {isLocked && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-300/70 px-2 py-1 text-[10px] font-extrabold text-slate-600">
-                          <LockKeyhole className="h-3 w-3" />
-                          LOCKED
-                        </span>
-                      )}
-                    </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+          <span className="rounded-lg bg-white/15 px-3 py-2">
+            <BookOpen className="mr-1 inline h-3.5 w-3.5" />
+            {stageCount} stages
+          </span>
 
-                    <h2 className="max-w-[250px] text-lg font-black leading-tight sm:text-xl">
-                      {roadmap.title}
-                    </h2>
+          <span className="rounded-lg bg-white/15 px-3 py-2">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            {XP_PER_STAGE} XP per stage
+          </span>
+        </div>
 
-                    <p
-                      className={`mt-1 line-clamp-2 max-w-[260px] text-xs font-semibold leading-5 ${
-                        isLocked ? "text-slate-500" : "text-white/80"
-                      }`}
-                    >
-                      {roadmap.description ||
-                        "A new adventure awaits. Keep learning and level up!"}
-                    </p>
+        {isCompleted && (
+          <button
+            onClick={() => openEvaluation(roadmap.id)}
+            className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-yellow-300 px-4 py-3 text-sm font-black text-yellow-950 shadow-[0_3px_0_#ca8a04] transition hover:bg-yellow-200 active:translate-y-px active:shadow-none"
+          >
+            <Trophy className="h-4 w-4" />
+            Take evaluation
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    )}
+  </article>
+);
 
-                    <div className="mt-4 max-w-[270px]">
-                      <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-extrabold">
-                        <span className="flex items-center gap-1">
-                          {isLocked ? (
-                            <LockKeyhole className="h-3 w-3" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
-
-                          {isLocked
-                            ? `${requiredXP - xp} more XP to unlock`
-                            : `${completedStages} / ${stageCount} stages`}
-                        </span>
-
-                        {!isLocked && <span>{progress}%</span>}
-                      </div>
-
-                      <div
-                        className={`h-2.5 overflow-hidden rounded-full ${
-                          isLocked ? "bg-slate-300" : "bg-black/20"
-                        }`}
-                      >
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isLocked ? "bg-slate-400" : ""
-                          }`}
-                          style={{
-                            width: `${isLocked ? 0 : progress}%`,
-                            ...(isLocked
-                              ? {}
-                              : { backgroundColor: color.progress }),
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-                      {isLocked ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-300/80 px-3 py-2 text-[10px] font-black text-slate-600">
-                          <LockKeyhole className="h-3 w-3" />
-                          NEED {requiredXP} XP
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => openRoadmap(roadmap.id)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-white/90 active:translate-y-px"
-                          >
-                            {isCompleted
-                              ? "Review"
-                              : completedStages > 0
-                                ? "Continue"
-                                : "Start quest"}
-                            <ArrowRight className="h-3 w-3" />
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              setExpandedId(
-                                expanded ? null : roadmap.id
-                              )
-                            }
-                            aria-expanded={expanded}
-                            aria-controls={`roadmap-details-${roadmap.id}`}
-                            className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 hover:bg-white/10"
-                          >
-                            Details
-                            <ChevronDown
-                              className={`h-3 w-3 transition-transform ${
-                                expanded ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Illustration */}
-                  <div className="relative flex w-[34%] shrink-0 items-center justify-center sm:w-[36%]">
-                    <div
-                      className="absolute inset-2 rounded-2xl"
-                      style={{
-                        backgroundColor: isLocked
-                          ? "rgba(148, 163, 184, 0.25)"
-                          : color.soft,
-                      }}
-                    />
-
-                    {roadmap.imageUrl ? (
-                      <img
-                        src={roadmap.imageUrl}
-                        alt=""
-                        loading="lazy"
-                        className={`relative z-10 max-h-32 w-full object-contain p-1 sm:max-h-36 ${
-                          isLocked
-                            ? "grayscale opacity-50"
-                            : "drop-shadow-md"
-                        }`}
-                      />
-                    ) : (
-                      <div
-                        className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-3xl ${
-                          isLocked
-                            ? "bg-slate-300 text-slate-500"
-                            : "bg-white/20 text-white"
-                        }`}
-                      >
-                        {isLocked ? (
-                          <LockKeyhole className="h-9 w-9" />
-                        ) : isCompleted ? (
-                          <Trophy className="h-10 w-10" />
-                        ) : (
-                          <BookOpen className="h-10 w-10" />
-                        )}
-                      </div>
-                    )}
-
-                    {isCompleted && (
-                      <div className="absolute bottom-3 right-3 z-20">
-                        <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-green-300 bg-gradient-to-b from-lime-300 via-green-400 to-green-600 shadow-[0_4px_0_#15803d,0_6px_10px_rgba(0,0,0,0.25)]">
-                          <div className="absolute left-1 top-1 h-2 w-3 -rotate-12 rounded-full bg-white/70 blur-[1px]" />
-                          <Check className="relative z-10 mt-0.5 h-5 w-5 stroke-[4] text-white drop-shadow-[0_2px_1px_rgba(0,80,30,0.65)]" />
-                        </div>
-                      </div>
-                    )}
-
-                    {isLocked && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center">
-                        <div className="rounded-full bg-slate-500/80 p-3 text-white shadow-md">
-                          <LockKeyhole className="h-5 w-5" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expandable details */}
-                {expanded && !isLocked && (
-                  <div
-                    id={`roadmap-details-${roadmap.id}`}
-                    className="border-t border-white/20 bg-black/10 px-4 py-4 sm:px-5"
-                  >
-                    <p className="text-sm font-semibold leading-6 text-white/95">
-                      {roadmap.description ||
-                        `Explore ${stageCount} stages and earn ${XP_PER_STAGE} XP for every stage you complete.`}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                      <span className="rounded-lg bg-white/15 px-3 py-2">
-                        <BookOpen className="mr-1 inline h-3.5 w-3.5" />
-                        {stageCount} stages
-                      </span>
-
-                      <span className="rounded-lg bg-white/15 px-3 py-2">
-                        <Sparkles className="mr-1 inline h-3.5 w-3.5" />
-                        {XP_PER_STAGE} XP per stage
-                      </span>
-                    </div>
-
-                    {isCompleted && (
-                      <button
-                        onClick={() => openEvaluation(roadmap.id)}
-                        className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-yellow-300 px-4 py-3 text-sm font-black text-yellow-950 shadow-[0_3px_0_#ca8a04] transition hover:bg-yellow-200 active:translate-y-px active:shadow-none"
-                      >
-                        <Trophy className="h-4 w-4" />
-                        Take evaluation
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </article>
-            );
           })}
         </div>
       )}

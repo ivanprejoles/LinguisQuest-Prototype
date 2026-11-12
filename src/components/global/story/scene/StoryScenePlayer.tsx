@@ -802,29 +802,28 @@ function StoryScenePlayer({
               ? '18px'
               : SCENE_STYLE.dialogue.paddingX,
 
-          paddingTop: isMobileViewport ? '18px' : '22px',
-          paddingBottom: isMobileViewport ? '10px' : '14px',
+          paddingTop: isMobileViewport ? '15px' : '22px',
+          paddingBottom: isMobileViewport ? '6px' : '14px',
         }}
       >
         {/* Speaker / Scene Name Plaque */}
         <div
-          className="absolute -top-[17px] left-4 z-10
-            rounded-md border-2 border-[#a77a32]
+          className="absolute -top-3 left-3 z-10
+            max-w-[85%] rounded-md border-2 border-[#a77a32]
             bg-gradient-to-b from-[#fff4cf] to-[#e7ca83]
-            px-5 py-1 font-serif font-bold
-            text-[#493619] shadow-md"
+            px-3 py-1 font-serif font-bold
+            text-[#493619] shadow-md sm:-top-[17px] sm:left-4 sm:max-w-[80%] sm:px-5 sm:py-1"
           style={{
-            fontSize: isMobileViewport ? '13px' : '16px',
-            maxWidth: '80%',
+            fontSize: isMobileViewport ? '11px' : '16px',
           }}
         >
-          <span className="block truncate">
+          <span className="block whitespace-normal break-words leading-tight">
             {speakerName}
           </span>
         </div>
 
         {/* Dialogue Text */}
-        <div
+        {/* <div
           className={`w-full pr-1 font-serif text-[#382817] ${
             isSmallViewport
               ? 'min-h-0 overflow-y-auto'
@@ -850,7 +849,30 @@ function StoryScenePlayer({
                 animate-pulse bg-[#9b7134] align-middle"
             />
           )}
-        </div>
+        </div> */}
+        {/* Dialogue Text */}
+<div
+  className={`w-full min-w-0 pr-1 font-serif text-[#382817] ${
+    isSmallViewport
+      ? 'min-h-0 overflow-y-auto'
+      : 'overflow-y-auto pr-2'
+  }`}
+  style={{
+    maxWidth: SCENE_STYLE.dialogue.textMaxWidth,
+    fontSize: dialogueFontSize,
+    lineHeight: isMobileViewport ? 1.4 : SCENE_STYLE.dialogue.lineHeight,
+    overflowWrap: 'anywhere',
+    whiteSpace: 'pre-wrap',
+    scrollbarWidth: 'thin',
+    paddingBottom: '4px',
+  }}
+>
+  {dialogueText.slice(0, visibleChars)}
+
+  {isTyping && (
+    <span className="ml-1 inline-block h-[1em] w-[2px] animate-pulse bg-[#9b7134] align-middle" />
+  )}
+</div>
 
         {/* Dedicated Continue Button */}
         {!showChoices && (

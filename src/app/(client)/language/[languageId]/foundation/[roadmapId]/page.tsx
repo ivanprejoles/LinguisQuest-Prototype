@@ -344,7 +344,7 @@ export default function RoadmapStagesPage() {
   return (
     <main className="relative mx-auto h-full w-full max-w-5xl overflow-hidden px-4 pb-20 pt-5 sm:px-6">
       {/* Roadmap header */}
-      <header
+      {/* <header
         className="relative overflow-hidden rounded-2xl border-2 p-5 text-white"
         style={{
           backgroundColor: color.background,
@@ -458,16 +458,153 @@ export default function RoadmapStagesPage() {
             <ArrowRight className="relative h-5 w-5" />
           </button>
         )}
-      </header>
+      </header> */}
+      
+{/* Roadmap header */}
+<header
+  className="relative overflow-hidden rounded-2xl border-2 p-3 sm:rounded-3xl sm:p-4"
+  style={{
+    backgroundColor: color.background,
+    borderColor: color.border,
+    boxShadow: `0 4px 0 ${color.shadow}`,
+  }}
+>
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-2xl sm:h-40 sm:w-40"
+    style={{ backgroundColor: color.soft }}
+  />
+
+  <button
+    type="button"
+    onClick={() =>
+      router.push(`/language/${languageId}/foundation`)
+    }
+    aria-label="Back to roadmaps"
+    className="relative mb-2.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-white/20 transition hover:bg-white/30 sm:mb-3 sm:h-8 sm:w-8"
+  >
+    <ArrowLeft className="h-4 w-4" />
+  </button>
+
+  <div className="relative flex items-center gap-2.5 sm:gap-4">
+    <div className="min-w-0 flex-1">
+      <span className="text-[8px] font-black uppercase tracking-[0.14em] text-white/75 sm:text-[10px]">
+        Learning path · Unit {roadmap.order + 1}
+      </span>
+
+      <h1 className="mt-0.5 break-words text-lg font-black leading-tight sm:text-2xl">
+        {roadmap.title}
+      </h1>
+
+      {roadmap.description && (
+        <details className="group mt-1.5">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[9px] font-bold text-white/90 transition hover:bg-white/20 sm:text-[11px] [&::-webkit-details-marker]:hidden">
+            About this roadmap
+            <span className="inline-block text-xs transition-transform duration-200 group-open:rotate-45">
+              +
+            </span>
+          </summary>
+
+          <div className="mt-1.5 rounded-lg border border-white/15 bg-black/10 p-2">
+            <p className="text-[10px] font-medium leading-4 text-white/85 sm:text-xs sm:leading-5">
+              {roadmap.description}
+            </p>
+          </div>
+        </details>
+      )}
+    </div>
+
+    <div
+      className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl border border-white/20 shadow-lg sm:h-28 sm:w-28 sm:rounded-2xl"
+      style={{ backgroundColor: color.soft }}
+    >
+      {roadmap.imageUrl ? (
+        <img
+          src={roadmap.imageUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-white/10">
+          <BookOpen className="h-7 w-7 text-white sm:h-11 sm:w-11" />
+        </div>
+      )}
+
+      <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10 sm:rounded-2xl" />
+    </div>
+  </div>
+
+  <div className="relative mt-3 flex items-center justify-between gap-2 text-[9px] font-extrabold sm:mt-4 sm:text-xs">
+    <span className="min-w-0 truncate">
+      {isRoadmapCompleted
+        ? "Roadmap completed!"
+        : `${completedStageCount} / ${stages.length} stages completed`}
+    </span>
+
+    <span className="shrink-0 rounded-full bg-black/15 px-2 py-0.5 sm:px-3 sm:py-1">
+      {userXp.toLocaleString()} XP
+    </span>
+  </div>
+
+  <div
+    className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/20 sm:mt-2 sm:h-2"
+    role="progressbar"
+    aria-label="Roadmap progress"
+    aria-valuenow={progressPercent}
+    aria-valuemin={0}
+    aria-valuemax={100}
+  >
+    <div
+      className="h-full rounded-full transition-[width] duration-500"
+      style={{
+        width: `${progressPercent}%`,
+        backgroundColor: color.progress,
+      }}
+    />
+  </div>
+
+  {isRoadmapCompleted && (
+    <button
+      type="button"
+      onClick={() =>
+        router.push(
+          `/language/${languageId}/foundation/${roadmapId}/evaluation`
+        )
+      }
+      className="relative mt-3 flex w-full cursor-pointer items-center justify-between overflow-hidden rounded-lg border-2 border-amber-200 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 px-2.5 py-2 text-left text-amber-950 shadow-[0_3px_0_#b45309] transition hover:brightness-110 active:translate-y-1 active:shadow-none sm:mt-4 sm:px-3 sm:py-2.5"
+    >
+      <span className="absolute -right-2 -top-4 h-14 w-14 rounded-full bg-white/20 blur-xl" />
+
+      <span className="relative flex min-w-0 items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/60 bg-white/30 shadow-inner sm:h-9 sm:w-9">
+          <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+        </span>
+
+        <span className="min-w-0">
+          <span className="block text-[11px] font-black sm:text-sm">
+            Take the evaluation
+          </span>
+          <span className="block text-[8px] font-bold text-amber-950/75 sm:text-[10px]">
+            All {stages.length} stages completed!
+          </span>
+        </span>
+      </span>
+
+      <ArrowRight className="relative h-4 w-4 shrink-0" />
+    </button>
+  )}
+</header>
+
 
       {/* Stepping-stone learning path */}
       <section className="relative mt-8">
         <div className="mb-8 text-center">
           <span
-            className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest"
+            className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest text-white"
             style={{
               backgroundColor: color.soft,
-              color: color.background,
+              // color: color.background,
             }}
           >
             {isRoadmapCompleted
@@ -509,11 +646,11 @@ export default function RoadmapStagesPage() {
                     return `Q ${previousX} ${middleY} ${x} ${y}`;
                   })
                   .join(" ")}
-                stroke={color.border}
+                stroke="#FACC15"
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray="3 10"
-                opacity="0.22"
+                opacity="0.50"
               />
             </svg>
 

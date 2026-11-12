@@ -62,6 +62,7 @@ async function fetchStories(
 
 function StoryCard({ story }: { story: StorySession }) {
   const [imageError, setImageError] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const storyTitle = story.title?.trim() || "Untitled Story";
   const storyDescription =
@@ -82,7 +83,7 @@ function StoryCard({ story }: { story: StorySession }) {
         aria-label={`Open ${storyTitle}`}
         className="block shrink-0 overflow-hidden rounded-xl"
       >
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#171F32]">
+        <div className="relative aspect-[5/4] w-full overflow-hidden bg-[#171F32] sm:aspect-[4/5]">
           {story.imageUrl && !imageError ? (
             <img
               src={story.imageUrl}
@@ -119,12 +120,12 @@ function StoryCard({ story }: { story: StorySession }) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#F5C66A]/50 to-transparent" />
 
           {/* Story title overlay */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 sm:p-5">
             <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#F5C66A]">
               Your next adventure
             </p>
 
-            <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-white drop-shadow-md">
+            <h2 className="line-clamp-2 text-base font-semibold leading-snug text-white drop-shadow-md sm:text-lg">
               {storyTitle}
             </h2>
           </div>
@@ -134,35 +135,61 @@ function StoryCard({ story }: { story: StorySession }) {
         </div>
       </Link>
 
-      {/* Story information */}
-      <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <p className="line-clamp-2 min-h-[2.5rem] text-left text-xs leading-relaxed text-white/60">
-                {storyDescription}
-              </p>
-            }
-          />
-          <TooltipContent>
-            <p className="max-w-sm">{storyDescription}</p>
-          </TooltipContent>
-        </Tooltip>
+      
+{/* Story information */}
+<div className="flex flex-1 flex-col px-2 pb-2 pt-2 sm:px-3 sm:pb-3 sm:pt-3">
+  {/* Mobile description with See more */}
+  <div className="sm:hidden">
+    <p
+      className={`text-xs leading-relaxed text-white/60 ${
+        descriptionExpanded ? "" : "line-clamp-2"
+      }`}
+    >
+      {storyDescription}
+    </p>
 
-        <div className="mb-3 mt-4 h-px bg-gradient-to-r from-[#F5C66A]/25 via-white/10 to-transparent" />
+    {storyDescription.length > 80 && (
+      <button
+        type="button"
+        onClick={() => setDescriptionExpanded((prev) => !prev)}
+        className="mt-1 text-[10px] font-semibold text-[#F5C66A] transition-colors hover:text-[#FFE7A8]"
+      >
+        {descriptionExpanded ? "See less" : "See more"}
+      </button>
+    )}
+  </div>
 
-        {/* Continue action */}
-        <Link
-          href={storyHref}
-          className="mt-auto flex min-h-10 items-center justify-between gap-3 rounded-lg px-2 py-2 text-sm font-medium text-[#F5D994] transition-colors hover:bg-[#F5C66A]/[0.08] hover:text-[#FFE7A8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C66A]/60"
-        >
-          <span>Continue reading</span>
+  {/* Desktop description with tooltip */}
+  <div className="hidden sm:block">
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <p className="line-clamp-2 min-h-[2.5rem] cursor-help text-left text-xs leading-relaxed text-white/60">
+            {storyDescription}
+          </p>
+        }
+      />
+      <TooltipContent>
+        <p className="max-w-sm">{storyDescription}</p>
+      </TooltipContent>
+    </Tooltip>
+  </div>
 
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#F5C66A]/20 bg-[#D5A94F]/10 transition-all duration-300 group-hover:border-[#F5C66A]/40 group-hover:bg-[#D5A94F]/20">
-            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </span>
-        </Link>
-      </div>
+  <div className="mb-3 mt-3 h-px bg-gradient-to-r from-[#F5C66A]/25 via-white/10 to-transparent sm:mb-3 sm:mt-4" />
+
+  {/* Continue action */}
+  <Link
+    href={storyHref}
+    className="mt-auto flex min-h-9 items-center justify-between gap-2 rounded-lg px-1.5 py-1.5 text-[11px] font-medium text-[#F5D994] transition-colors hover:bg-[#F5C66A]/[0.08] hover:text-[#FFE7A8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C66A]/60 sm:min-h-10 sm:gap-3 sm:px-2 sm:py-2 sm:text-sm"
+  >
+    <span>Continue reading</span>
+
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#F5C66A]/20 bg-[#D5A94F]/10 transition-all duration-300 group-hover:border-[#F5C66A]/40 group-hover:bg-[#D5A94F]/20">
+      <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+    </span>
+  </Link>
+</div>
+
     </article>
   );
 }
@@ -256,54 +283,55 @@ export default function StoryArchivesPage() {
         </div>
 
         {/* Page content */}
-        <div className="relative z-10 mx-auto w-full max-w-[1600px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+        <div className="relative z-10 mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+          
           {/* Archive header */}
-          <header className="mb-9 rounded-2xl border border-white/10 bg-[#0B1020]/30 px-5 py-6 shadow-lg shadow-black/10 backdrop-blur-sm sm:mb-10 sm:px-7 sm:py-8">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#F5C66A]/30 bg-[#D5A94F]/10 shadow-inner shadow-[#D5A94F]/5">
-                <BookOpen className="h-5 w-5 text-[#F5C66A]" />
+          <header className="mb-6 rounded-2xl border border-white/10 bg-[#0B1020]/30 px-3.5 py-4 shadow-lg shadow-black/10 backdrop-blur-sm sm:mb-10 sm:px-7 sm:py-8">
+            {/* Small archive identity */}
+            <div className="mb-3 flex items-center gap-2.5 sm:mb-6 sm:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#F5C66A]/30 bg-[#D5A94F]/10 shadow-inner shadow-[#D5A94F]/5 sm:h-11 sm:w-11 sm:rounded-xl">
+                <BookOpen className="h-4 w-4 text-[#F5C66A] sm:h-5 sm:w-5" />
               </div>
 
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#F5C66A]">
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#F5C66A] sm:text-[10px] sm:tracking-[0.25em]">
                   Your next adventure
                 </p>
-                <p className="mt-1 text-xs text-white/65">
+                <p className="mt-0.5 text-[10px] text-white/65 sm:mt-1 sm:text-xs">
                   Every story opens a new world
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-              <div className="max-w-2xl">
-                <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-[#F5C66A]/80">
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end lg:gap-6">
+              <div className="min-w-0 max-w-2xl">
+                <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#F5C66A]/80 sm:mb-3 sm:text-xs sm:tracking-[0.2em]">
                   The journey begins here
                 </p>
 
-                <h1 className="text-3xl font-semibold tracking-tight text-[#FFF9EC] sm:text-4xl lg:text-5xl">
+                <h1 className="text-2xl font-semibold leading-tight tracking-tight text-[#FFF9EC] sm:text-4xl lg:text-5xl">
                   The Story Archives
                 </h1>
 
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
-                  Step into new worlds, meet unforgettable characters, and
-                  discover a new language one story at a time.
+                <p className="mt-2 max-w-xl text-xs leading-relaxed text-white/70 sm:mt-3 sm:text-base">
+                  Step into new worlds, meet unforgettable characters, and discover a
+                  new language one story at a time.
                 </p>
 
                 {!showLoading && !showError && (
-                  <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#F5C66A]/20 bg-[#D5A94F]/10 px-3.5 py-2">
+                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#F5C66A]/20 bg-[#D5A94F]/10 px-2.5 py-1.5 sm:mt-5 sm:gap-2 sm:px-3.5 sm:py-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#F5C66A]" />
-                    <p className="text-xs font-medium text-[#F5E3B6]">
-                      {stories.length}{" "}
-                      {stories.length === 1 ? "story" : "stories"} in your
-                      collection
+                    <p className="text-[10px] font-medium text-[#F5E3B6] sm:text-xs">
+                      {stories.length} {stories.length === 1 ? "story" : "stories"} in
+                      your collection
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Search */}
-              <div className="relative w-full lg:max-w-sm">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#F5C66A]/75" />
+              <div className="relative w-full lg:max-w-sm lg:shrink-0">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#F5C66A]/75 sm:left-4 sm:h-4 sm:w-4" />
 
                 <input
                   type="search"
@@ -311,12 +339,11 @@ export default function StoryArchivesPage() {
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search your stories..."
                   aria-label="Search stories"
-                  className="h-12 w-full rounded-xl border border-white/15 bg-[#0B1020]/65 pl-11 pr-4 text-sm text-[#FFF9EC] outline-none backdrop-blur-md transition placeholder:text-white/40 hover:border-white/25 focus:border-[#F5C66A]/60 focus:ring-2 focus:ring-[#F5C66A]/15"
+                  className="h-10 w-full rounded-lg border border-white/15 bg-[#0B1020]/65 pl-10 pr-3 text-xs text-[#FFF9EC] outline-none backdrop-blur-md transition placeholder:text-white/40 hover:border-white/25 focus:border-[#F5C66A]/60 focus:ring-2 focus:ring-[#F5C66A]/15 sm:h-12 sm:rounded-xl sm:pl-11 sm:pr-4 sm:text-sm"
                 />
               </div>
             </div>
           </header>
-
           {/* Loading state */}
           {showLoading && (
             <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-4">
@@ -419,7 +446,7 @@ export default function StoryArchivesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredStories.map((story) => (
                   <StoryCard key={story.id} story={story} />
                 ))}

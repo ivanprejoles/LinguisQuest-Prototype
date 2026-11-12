@@ -192,10 +192,10 @@ export default function LanguagesPage() {
 
                 {/* Top label */}
                 <div className="flex w-full items-center justify-between p-5 sm:p-6">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
                     Journey 0{index + 1}
                   </span>
-                  <span className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-[10px] text-white/80 backdrop-blur-md">
+                  <span className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-[10px] text-white backdrop-blur-md">
                     Explore
                   </span>
                 </div>
@@ -226,12 +226,12 @@ export default function LanguagesPage() {
                     {feature.title}
                   </h2>
 
-                  <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">
+                  <p className="mt-3 max-w-sm text-sm leading-6 text-white">
                     {feature.description}
                   </p>
 
                   <div className="mt-6 flex items-center justify-between border-t border-white/15 pt-4">
-                    <span className="text-xs font-medium text-white/70 transition group-hover:text-white">
+                    <span className="text-xs font-medium text-white transition group-hover:text-white">
                       Enter experience
                     </span>
                     <span

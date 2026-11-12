@@ -330,7 +330,7 @@ export class TracingEngine {
       totalDrawn,
       accuracy,
       coverage,
-      isPassed: accuracy >= 95 && coverage >= 90,
+      isPassed: accuracy >= 90 && coverage >= 90,
       isFailed:
         this.outOfBoundsHits > this.validHits &&
         totalDrawn > 30,

@@ -593,7 +593,7 @@ export default function StageLessonPage() {
   return (
     <div className="h-full flex flex-col justify-between select-none">
       {/* Lesson Navigation Header */}
-      <header className="max-w-2xl w-full mx-auto px-6 pt-6 flex items-center gap-4">
+      <header className="max-w-2xl w-full mx-auto px-4 pt-3 sm:px-6 sm:pt-4 flex items-center gap-3 sm:gap-4">
         <button
           onClick={handleExit}
           className="p-2 text-white hover:text-slate-400 rounded-xl transition-colors cursor-pointer"
@@ -634,7 +634,7 @@ export default function StageLessonPage() {
       </header>
 
       {/* Stage Material */}
-      <main className="max-w-xl w-full mx-auto px-6 flex-1 flex flex-col justify-center py-6">
+      <main className="max-w-xl w-full mx-auto flex-1 flex flex-col justify-center px-4 py-2 sm:px-6 sm:py-4">
         <StageMaterialRenderer
           stage={stage}
           onAnswerChange={setIsCurrentAnswerCorrect}
@@ -642,7 +642,7 @@ export default function StageLessonPage() {
       </main>
 
       {/* Answer Feedback & Submit Footer */}
-      <footer
+      {/* <footer
         className={`w-full py-6 px-6 transition-all border-slate-500 border-t duration-200 ${
           isSubmitted
             ? isCurrentAnswerCorrect
@@ -652,7 +652,7 @@ export default function StageLessonPage() {
         }`}
       >
         <div className="max-w-xl mx-auto flex items-center justify-between gap-4">
-          {/* Answer feedback */}
+          Answer feedback
           {isSubmitted ? (
             <div
               className="flex items-center gap-3"
@@ -693,7 +693,7 @@ export default function StageLessonPage() {
             <div />
           )}
 
-          {/* Check, feedback, or Continue button */}
+          Check, feedback, or Continue button
           {!isSubmitted ? (
             <button
               onClick={handleCheckAnswer}
@@ -733,7 +733,100 @@ export default function StageLessonPage() {
             </button>
           )}
         </div>
-      </footer>
+      </footer> */}
+
+{/* Answer Feedback & Submit Footer */}
+<footer
+  className={`w-full border-t border-slate-500 px-4 py-3 sm:px-6 sm:py-4 transition-all duration-200 ${
+    isSubmitted
+      ? isCurrentAnswerCorrect
+        ? "backdrop-blur-xl bg-emerald-950/50 border-emerald-300/30"
+        : "backdrop-blur-xl bg-rose-950/50 border-rose-300/30"
+      : ""
+  }`}
+>
+  <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+    {/* Answer feedback */}
+    {isSubmitted ? (
+      <div
+        className="flex min-w-0 items-center gap-2"
+        role="status"
+        aria-live="polite"
+      >
+        {isCurrentAnswerCorrect ? (
+          <>
+            <CheckCircle2 className="h-6 w-6 shrink-0 text-green-400 sm:h-7 sm:w-7" />
+
+            <div className="min-w-0">
+              <p className="text-sm font-black text-green-300 sm:text-base">
+                Excellent!
+              </p>
+              <p className="text-[10px] font-bold text-green-200 sm:text-xs">
+                Your answer is correct.
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="h-6 w-6 shrink-0 animate-pulse text-rose-400 sm:h-7 sm:w-7" />
+
+            <div className="min-w-0">
+              <p className="text-sm font-black text-rose-300 sm:text-base">
+                Not quite!
+              </p>
+              <p className="text-[10px] font-bold text-rose-200 sm:text-xs">
+                Check your response and try again.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    ) : (
+      <div />
+    )}
+
+    {/* Check or Continue button */}
+    {!isSubmitted ? (
+      <button
+        onClick={handleCheckAnswer}
+        className="ml-auto cursor-pointer rounded-xl bg-green-500 px-6 py-2.5 text-sm font-black uppercase tracking-wide text-white shadow-[0_3px_0_0_#16a34a] transition-all hover:bg-green-400 active:translate-y-1 active:shadow-none sm:px-8 sm:py-3"
+      >
+        Check
+      </button>
+    ) : (
+      <button
+        onClick={
+          isCurrentAnswerCorrect ? handleNextStage : undefined
+        }
+        disabled={
+          isNavigating ||
+          (isSubmitted && !isCurrentAnswerCorrect)
+        }
+        aria-live="polite"
+        className={`ml-auto rounded-xl px-6 py-2.5 text-sm font-black uppercase tracking-wide text-white shadow-[0_3px_0_0] transition-all active:translate-y-1 active:shadow-none disabled:cursor-default disabled:opacity-100 sm:px-8 sm:py-3 ${
+          isCurrentAnswerCorrect
+            ? "cursor-pointer bg-green-500 shadow-green-600 hover:bg-green-400"
+            : "bg-rose-500 shadow-rose-600 wrong-answer-button"
+        }`}
+      >
+        {isNavigating ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </span>
+        ) : isCurrentAnswerCorrect ? (
+          "Continue"
+        ) : (
+          <span className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Not quite!
+          </span>
+        )}
+      </button>
+    )}
+  </div>
+</footer>
+
 
       {/* Wrong-answer shake animation */}
       <style jsx>{`

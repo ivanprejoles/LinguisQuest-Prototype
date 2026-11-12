@@ -1,4 +1,38 @@
 
+// "use client";
+
+// import React, { useState, useEffect } from "react";
+// import { UserButton } from "@clerk/nextjs";
+
+// export function UserMenu() {
+//   const [mounted, setMounted] = useState(false);
+
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   if (!mounted) {
+//     return (
+//       <div className="h-10 w-10 animate-pulse rounded-full bg-slate-700" />
+//     );
+//   }
+
+//   return (
+//     <UserButton
+//       appearance={{
+//         elements: {
+//           userButtonBox: "!h-10 !w-10",
+//           userButtonTrigger:
+//             "!h-10 !w-10 !rounded-full !p-0 ring-2 ring-cyan-400/60 hover:ring-cyan-300",
+//           userButtonAvatarBox: "!h-10 !w-10 !rounded-full",
+//           userButtonAvatarImage:
+//             "!h-full !w-full !rounded-full object-cover",
+//         },
+//       }}
+//     />
+//   );
+// }
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -13,7 +47,10 @@ export function UserMenu() {
 
   if (!mounted) {
     return (
-      <div className="h-10 w-10 animate-pulse rounded-full bg-slate-700" />
+      <div className="
+        h-8 w-8 sm:h-10 sm:w-10
+        animate-pulse rounded-full bg-slate-700
+      " />
     );
   }
 
@@ -21,10 +58,11 @@ export function UserMenu() {
     <UserButton
       appearance={{
         elements: {
-          userButtonBox: "!h-10 !w-10",
+          userButtonBox: "!h-8 !w-8 sm:!h-10 sm:!w-10",
           userButtonTrigger:
-            "!h-10 !w-10 !rounded-full !p-0 ring-2 ring-cyan-400/60 hover:ring-cyan-300",
-          userButtonAvatarBox: "!h-10 !w-10 !rounded-full",
+            "!h-8 !w-8 sm:!h-10 sm:!w-10 !rounded-full !p-0 ring-2 ring-cyan-400/60 hover:ring-cyan-300",
+          userButtonAvatarBox:
+            "!h-8 !w-8 sm:!h-10 sm:!w-10 !rounded-full",
           userButtonAvatarImage:
             "!h-full !w-full !rounded-full object-cover",
         },

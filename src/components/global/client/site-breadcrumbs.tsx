@@ -435,6 +435,154 @@ export function SiteBreadcrumbs({
   return renderBreadcrumbs(items, pathname);
 }
 
+// function renderBreadcrumbs(
+//   items: BreadcrumbItem[],
+//   pathname: string
+// ) {
+//   const currentItem = items[items.length - 1];
+//   const CurrentIcon = currentItem.icon;
+
+//   return (
+//     <nav aria-label="Breadcrumb" className="min-w-0">
+//       {/* Mobile breadcrumb dropdown */}
+//       <div className="min-w-0 sm:hidden">
+//         <DropdownMenu>
+//           <DropdownMenuTrigger
+//             render={
+//               <button
+//                 type="button"
+//                 aria-label={`Current location: ${currentItem.label}. Open breadcrumb navigation`}
+//                 className={cn(
+//                   "inline-flex min-w-0 max-w-full items-center gap-2",
+//                   "rounded-xl border border-slate-200 bg-white px-3 py-2",
+//                   "text-sm font-semibold text-slate-700 shadow-sm",
+//                   "transition-colors hover:border-cyan-200 hover:bg-cyan-50",
+//                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500",
+//                   "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+//                 )}
+//               >
+//                 <CurrentIcon className="size-4 shrink-0 text-cyan-600" />
+
+//                 <span className="max-w-[180px] truncate">
+//                   {currentItem.label}
+//                 </span>
+
+//                 <ChevronDown className="size-4 shrink-0 text-slate-400" />
+//               </button>
+//             }
+//           />
+
+//           <DropdownMenuContent
+//             align="start"
+//             sideOffset={8}
+//             className="w-[min(280px,calc(100vw-2rem))] rounded-xl border border-slate-200 p-2 shadow-xl dark:border-slate-700"
+//           >
+//             <div className="px-2 py-2">
+//               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+//                 Navigation
+//               </p>
+
+//               <p className="mt-1 text-xs text-muted-foreground">
+//                 Browse your current location
+//               </p>
+//             </div>
+
+//             <div className="mb-1 border-t border-slate-100 dark:border-slate-800" />
+
+//             {items.map((item, index) => {
+//               const isCurrent = index === items.length - 1;
+//               const Icon = item.icon;
+
+//               return (
+//                 <DropdownMenuItem
+//                   key={`${item.href}-${index}`}
+//                   className="cursor-pointer rounded-lg p-0 focus:bg-cyan-50 dark:focus:bg-cyan-950/40"
+//                   render={
+//                     <Link
+//                       href={item.href}
+//                       aria-current={isCurrent ? "page" : undefined}
+//                       className={cn(
+//                         "flex w-full items-center gap-3 rounded-lg px-3 py-2.5",
+//                         isCurrent
+//                           ? "bg-cyan-50 font-bold text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300"
+//                           : "text-slate-600 dark:text-slate-300"
+//                       )}
+//                     >
+//                       <Icon
+//                         className={cn(
+//                           "size-4 shrink-0",
+//                           isCurrent
+//                             ? "text-cyan-600"
+//                             : "text-slate-400"
+//                         )}
+//                       />
+
+//                       <span className="min-w-0 flex-1 truncate text-sm">
+//                         {item.label}
+//                       </span>
+
+//                       {isCurrent && (
+//                         <span className="shrink-0 rounded-full bg-cyan-100 px-2 py-0.5 text-[9px] font-black uppercase text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300">
+//                           Current
+//                         </span>
+//                       )}
+//                     </Link>
+//                   }
+//                 />
+//               );
+//             })}
+//           </DropdownMenuContent>
+//         </DropdownMenu>
+//       </div>
+
+//       {/* Desktop breadcrumb */}
+//       <ol className="hidden min-w-0 items-center gap-1.5 sm:flex">
+//         {items.map((item, index) => {
+//           const isCurrent = index === items.length - 1;
+//           const Icon = item.icon;
+
+//           return (
+//             <li
+//               key={`${item.href}-${index}`}
+//               className="flex min-w-0 items-center gap-1.5"
+//             >
+//               {index > 0 && (
+//                 <ChevronRight
+//                   aria-hidden="true"
+//                   className="size-4 shrink-0 text-muted-foreground/60"
+//                 />
+//               )}
+
+//               <Link
+//                 href={item.href}
+//                 aria-current={isCurrent ? "page" : undefined}
+//                 className={cn(
+//                   "group inline-flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 lg:px-2",
+//                   "text-sm transition-colors",
+//                   "hover:bg-cyan-50 hover:text-cyan-600",
+//                   "dark:hover:bg-cyan-950/50 dark:hover:text-cyan-400",
+//                   isCurrent
+//                     ? "font-medium text-foreground"
+//                     : "text-muted-foreground"
+//                 )}
+//               >
+//                 <Icon
+//                   aria-hidden="true"
+//                   className="size-4 shrink-0 transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400"
+//                 />
+
+//                 <span className="hidden truncate 2xl:inline">
+//                   {item.label}
+//                 </span>
+//               </Link>
+//             </li>
+//           );
+//         })}
+//       </ol>
+//     </nav>
+//   );
+// }
+
 function renderBreadcrumbs(
   items: BreadcrumbItem[],
   pathname: string
@@ -444,7 +592,8 @@ function renderBreadcrumbs(
 
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
-      {/* Mobile breadcrumb dropdown */}
+
+      {/* Compact mobile breadcrumb */}
       <div className="min-w-0 sm:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -453,36 +602,39 @@ function renderBreadcrumbs(
                 type="button"
                 aria-label={`Current location: ${currentItem.label}. Open breadcrumb navigation`}
                 className={cn(
-                  "inline-flex min-w-0 max-w-full items-center gap-2",
-                  "rounded-xl border border-slate-200 bg-white px-3 py-2",
-                  "text-sm font-semibold text-slate-700 shadow-sm",
+                  "inline-flex h-8 min-w-0 max-w-full items-center gap-1.5",
+                  "rounded-lg border border-slate-200 bg-white px-2",
+                  "text-xs font-semibold text-slate-700 shadow-sm",
                   "transition-colors hover:border-cyan-200 hover:bg-cyan-50",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500",
                   "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 )}
               >
-                <CurrentIcon className="size-4 shrink-0 text-cyan-600" />
+                <CurrentIcon className="size-3.5 shrink-0 text-cyan-600" />
 
-                <span className="max-w-[180px] truncate">
+                <span className="max-w-[120px] truncate">
                   {currentItem.label}
                 </span>
 
-                <ChevronDown className="size-4 shrink-0 text-slate-400" />
+                <ChevronDown className="size-3 shrink-0 text-slate-400" />
               </button>
             }
           />
 
           <DropdownMenuContent
             align="start"
-            sideOffset={8}
-            className="w-[min(280px,calc(100vw-2rem))] rounded-xl border border-slate-200 p-2 shadow-xl dark:border-slate-700"
+            sideOffset={6}
+            className="
+              w-[min(260px,calc(100vw-1.5rem))]
+              rounded-xl border border-slate-200
+              p-1.5 shadow-xl dark:border-slate-700
+            "
           >
-            <div className="px-2 py-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <div className="px-2 py-1.5">
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                 Navigation
               </p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Browse your current location
               </p>
             </div>
@@ -502,7 +654,7 @@ function renderBreadcrumbs(
                       href={item.href}
                       aria-current={isCurrent ? "page" : undefined}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5",
+                        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2",
                         isCurrent
                           ? "bg-cyan-50 font-bold text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300"
                           : "text-slate-600 dark:text-slate-300"
@@ -510,19 +662,19 @@ function renderBreadcrumbs(
                     >
                       <Icon
                         className={cn(
-                          "size-4 shrink-0",
+                          "size-3.5 shrink-0",
                           isCurrent
                             ? "text-cyan-600"
                             : "text-slate-400"
                         )}
                       />
 
-                      <span className="min-w-0 flex-1 truncate text-sm">
+                      <span className="min-w-0 flex-1 truncate text-xs">
                         {item.label}
                       </span>
 
                       {isCurrent && (
-                        <span className="shrink-0 rounded-full bg-cyan-100 px-2 py-0.5 text-[9px] font-black uppercase text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300">
+                        <span className="shrink-0 rounded-full bg-cyan-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300">
                           Current
                         </span>
                       )}
@@ -535,7 +687,7 @@ function renderBreadcrumbs(
         </DropdownMenu>
       </div>
 
-      {/* Desktop breadcrumb */}
+      {/* Desktop breadcrumb - preserved */}
       <ol className="hidden min-w-0 items-center gap-1.5 sm:flex">
         {items.map((item, index) => {
           const isCurrent = index === items.length - 1;

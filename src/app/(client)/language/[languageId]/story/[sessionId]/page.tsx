@@ -114,6 +114,9 @@ export default function StoryPlayerPage() {
     endingNodeId: string;
   } | null>(null);
 
+  const savePromiseRef = useRef<Promise<boolean> | null>(null);
+  const finishAttemptInFlightRef = useRef(false);
+  
   // ---------------------------------------------------------------------------
   // Data fetching
   // ---------------------------------------------------------------------------
@@ -295,20 +298,82 @@ export default function StoryPlayerPage() {
   // Progress saving
   // ---------------------------------------------------------------------------
 
+  // const saveProgress = useCallback(
+  //   async (keepalive = false): Promise<boolean> => {
+  //     if (outcomeInFlightRef.current) return false;
+
+  //     const store = useStoryProgressStore.getState();
+  //     const current = store.progress[sessionId];
+
+  //     if (!current) return false;
+
+  //     if (!store.dirty[sessionId]) return true;
+
+  //     if (saveInFlightRef.current) return false;
+
+  //     saveInFlightRef.current = true;
+
+  //     const snapshot = {
+  //       currentNodeId: current.currentNodeId,
+  //       winCount: current.winCount,
+  //       lossCount: current.lossCount,
+  //     };
+
+  //     try {
+  //       const response = await fetch(`${baseUrl}/progress`, {
+  //         method: 'PUT',
+  //         cache: 'no-store',
+  //         keepalive,
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         },
+  //         body: JSON.stringify({
+  //           currentNodeId: snapshot.currentNodeId,
+  //         }),
+  //       });
+
+  //       if (!response.ok) {
+  //         throw new Error(`Save failed (${response.status})`);
+  //       }
+
+  //       const latestStore = useStoryProgressStore.getState();
+  //       const latest = latestStore.progress[sessionId];
+
+  //       if (
+  //         latest &&
+  //         latest.currentNodeId === snapshot.currentNodeId &&
+  //         latest.winCount === snapshot.winCount &&
+  //         latest.lossCount === snapshot.lossCount
+  //       ) {
+  //         latestStore.markClean(sessionId);
+  //         return true;
+  //       }
+
+  //       return false;
+  //     } catch (error) {
+  //       console.error('Checkpoint save failed:', error);
+  //       return false;
+  //     } finally {
+  //       saveInFlightRef.current = false;
+  //     }
+  //   },
+  //   [baseUrl, sessionId],
+  // );
+
   const saveProgress = useCallback(
     async (keepalive = false): Promise<boolean> => {
       if (outcomeInFlightRef.current) return false;
+
+      // Reuse an existing save instead of treating it as a failure.
+      if (savePromiseRef.current) {
+        return savePromiseRef.current;
+      }
 
       const store = useStoryProgressStore.getState();
       const current = store.progress[sessionId];
 
       if (!current) return false;
-
       if (!store.dirty[sessionId]) return true;
-
-      if (saveInFlightRef.current) return false;
-
-      saveInFlightRef.current = true;
 
       const snapshot = {
         currentNodeId: current.currentNodeId,
@@ -316,46 +381,61 @@ export default function StoryPlayerPage() {
         lossCount: current.lossCount,
       };
 
+      saveInFlightRef.current = true;
+
+      const saveTask = (async (): Promise<boolean> => {
+        try {
+          const response = await fetch(`${baseUrl}/progress`, {
+            method: 'PUT',
+            cache: 'no-store',
+            keepalive,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              currentNodeId: snapshot.currentNodeId,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Save failed (${response.status})`);
+          }
+
+          const latestStore = useStoryProgressStore.getState();
+          const latest = latestStore.progress[sessionId];
+
+          if (
+            latest &&
+            latest.currentNodeId === snapshot.currentNodeId &&
+            latest.winCount === snapshot.winCount &&
+            latest.lossCount === snapshot.lossCount
+          ) {
+            latestStore.markClean(sessionId);
+            return true;
+          }
+
+          return false;
+        } catch (error) {
+          console.error('Checkpoint save failed:', error);
+          return false;
+        }
+      })();
+
+      savePromiseRef.current = saveTask;
+
       try {
-        const response = await fetch(`${baseUrl}/progress`, {
-          method: 'PUT',
-          cache: 'no-store',
-          keepalive,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            currentNodeId: snapshot.currentNodeId,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Save failed (${response.status})`);
-        }
-
-        const latestStore = useStoryProgressStore.getState();
-        const latest = latestStore.progress[sessionId];
-
-        if (
-          latest &&
-          latest.currentNodeId === snapshot.currentNodeId &&
-          latest.winCount === snapshot.winCount &&
-          latest.lossCount === snapshot.lossCount
-        ) {
-          latestStore.markClean(sessionId);
-          return true;
-        }
-
-        return false;
-      } catch (error) {
-        console.error('Checkpoint save failed:', error);
-        return false;
+        return await saveTask;
       } finally {
+        if (savePromiseRef.current === saveTask) {
+          savePromiseRef.current = null;
+        }
+
         saveInFlightRef.current = false;
       }
     },
     [baseUrl, sessionId],
   );
+
 
   // ---------------------------------------------------------------------------
   // Ending outcome persistence
@@ -410,9 +490,58 @@ export default function StoryPlayerPage() {
   // Story ending
   // ---------------------------------------------------------------------------
 
+  // const finishStory = useCallback(
+  //   async (outcome: StoryOutcome, endingNodeId: string) => {
+  //     if (!startingNode || !activeNode || outcomeInFlightRef.current) {
+  //       return;
+  //     }
+
+  //     const endingKey =
+  //       `${sessionId}:${endingNodeId}:${sceneEntryCount}`;
+
+  //     if (handledEndingRef.current === endingKey) return;
+
+  //     const checkpointSaved = await saveProgress();
+
+  //     if (!checkpointSaved) {
+  //       setNavigationError(
+  //         'Unable to save the ending checkpoint. Please try again.',
+  //       );
+  //       return;
+  //     }
+
+  //     handledEndingRef.current = endingKey;
+
+  //     setEnding({
+  //       outcome,
+  //       node: activeNode,
+  //     });
+
+  //     pendingOutcomeRef.current = {
+  //       outcome,
+  //       endingNodeId,
+  //     };
+
+  //     await retryPendingOutcome();
+  //   },
+  //   [
+  //     sessionId,
+  //     startingNode,
+  //     activeNode,
+  //     sceneEntryCount,
+  //     saveProgress,
+  //     retryPendingOutcome,
+  //   ],
+  // );
+
   const finishStory = useCallback(
     async (outcome: StoryOutcome, endingNodeId: string) => {
-      if (!startingNode || !activeNode || outcomeInFlightRef.current) {
+      if (
+        !startingNode ||
+        !activeNode ||
+        outcomeInFlightRef.current ||
+        finishAttemptInFlightRef.current
+      ) {
         return;
       }
 
@@ -421,28 +550,34 @@ export default function StoryPlayerPage() {
 
       if (handledEndingRef.current === endingKey) return;
 
-      const checkpointSaved = await saveProgress();
+      finishAttemptInFlightRef.current = true;
 
-      if (!checkpointSaved) {
-        setNavigationError(
-          'Unable to save the ending checkpoint. Please try again.',
-        );
-        return;
+      try {
+        const checkpointSaved = await saveProgress();
+
+        if (!checkpointSaved) {
+          setNavigationError(
+            'Unable to save your progress. Please try again.',
+          );
+          return;
+        }
+
+        handledEndingRef.current = endingKey;
+
+        setEnding({
+          outcome,
+          node: activeNode,
+        });
+
+        pendingOutcomeRef.current = {
+          outcome,
+          endingNodeId,
+        };
+
+        await retryPendingOutcome();
+      } finally {
+        finishAttemptInFlightRef.current = false;
       }
-
-      handledEndingRef.current = endingKey;
-
-      setEnding({
-        outcome,
-        node: activeNode,
-      });
-
-      pendingOutcomeRef.current = {
-        outcome,
-        endingNodeId,
-      };
-
-      await retryPendingOutcome();
     },
     [
       sessionId,
@@ -453,6 +588,7 @@ export default function StoryPlayerPage() {
       retryPendingOutcome,
     ],
   );
+
 
   // ---------------------------------------------------------------------------
   // Dialogue and choice handling

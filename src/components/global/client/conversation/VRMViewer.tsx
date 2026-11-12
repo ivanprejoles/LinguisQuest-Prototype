@@ -389,10 +389,7 @@ export default function VRMViewer({
   return (
     <div
       ref={mountRef}
-      className="h-full w-full overflow-hidden rounded-2xl"
-      style={{
-        minHeight: 320,
-      }}
+      className="relative w-full h-[400px] min-h-[400px] max-h-[400px] overflow-hidden rounded-2xl"
     />
   );
 }

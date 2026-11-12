@@ -70,7 +70,7 @@ export default function ConversationTopicsPage() {
   const hasTopics = useMemo(() => topics.length > 0, [topics]);
 
   return (
-    <main className="relative isolate min-h-screen overflow-hidden px-4 py-10 text-white sm:px-8">
+    <main className="relative isolate min-h-screen overflow-hidden px-3 py-4 text-white sm:px-8 sm:py-10">
       {/* Fantasy background */}
       <div
         aria-hidden="true"
@@ -96,23 +96,23 @@ export default function ConversationTopicsPage() {
 
       <div className="mx-auto max-w-5xl">
         {/* Glass header */}
-        <GlassPanel className="mb-8 mt-8 p-6 sm:p-8">
-          <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-amber-200/20 bg-amber-300/10 text-amber-200 shadow-inner shadow-amber-200/5">
-              <MessageCircle className="size-6" />
+        <GlassPanel className="mb-5 mt-2 p-3.5 sm:mb-8 sm:mt-8 sm:p-8">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-200/20 bg-amber-300/10 text-amber-200 shadow-inner shadow-amber-200/5 sm:size-12 sm:rounded-2xl">
+              <MessageCircle className="size-4 sm:size-6" />
             </div>
 
-            <div className="min-w-0">
-              <div className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.2em] text-amber-200">
-                <MessageCircle className="size-4" />
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-[0.15em] text-amber-200 sm:mb-2 sm:gap-2 sm:text-xs sm:tracking-[0.2em]">
+                <Sparkles className="size-3 sm:size-4" />
                 AI Conversation Practice
               </div>
 
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+              <h1 className="text-xl font-black leading-tight tracking-tight text-white sm:text-4xl">
                 Build Your Fluency
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              <p className="mt-2 max-w-2xl text-[11px] leading-[1.6] text-slate-300 sm:mt-3 sm:text-base sm:leading-7">
                 Strengthen your communication skills through conversations with your
                 AI partner. Choose a topic, apply what you’ve learned, and become
                 more confident expressing yourself in your target language.
@@ -124,20 +124,20 @@ export default function ConversationTopicsPage() {
         {/* Loading state */}
         {isPending && (
           <div
-            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
             aria-label="Loading conversation topics"
             aria-busy="true"
           >
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <GlassPanel
                 key={item}
-                className="min-h-52 animate-pulse p-6"
+                className="min-h-40 animate-pulse p-3.5 sm:min-h-52 sm:p-6"
               >
-                <div className="size-10 rounded-xl bg-white/10" />
-                <div className="mt-6 h-5 w-3/4 rounded-lg bg-white/10" />
+                <div className="size-9 rounded-xl bg-white/10 sm:size-10" />
+                <div className="mt-4 h-5 w-3/4 rounded-lg bg-white/10 sm:mt-6" />
                 <div className="mt-3 h-3 w-full rounded bg-white/[0.07]" />
                 <div className="mt-2 h-3 w-2/3 rounded bg-white/[0.07]" />
-                <div className="mt-6 h-4 w-1/2 rounded bg-amber-200/10" />
+                <div className="mt-5 h-4 w-1/2 rounded bg-amber-200/10" />
               </GlassPanel>
             ))}
           </div>
@@ -202,45 +202,58 @@ export default function ConversationTopicsPage() {
               </p>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {topics.map((topic, index) => (
-                <Link
-                  key={topic.id}
-                  href={`/language/${encodeURIComponent(languageId)}/conversation/${encodeURIComponent(topic.id)}`}
-                  className="group block rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10182A]"
-                >
-                  <GlassPanel className="flex h-full min-h-56 flex-col p-6 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-amber-200/40 group-hover:shadow-2xl group-hover:shadow-amber-950/20">
-                    {/* Card accent */}
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent opacity-50 transition-opacity group-hover:opacity-100"
-                    />
+                
+<Link
+  key={topic.id}
+  href={`/language/${encodeURIComponent(languageId)}/conversation/${encodeURIComponent(topic.id)}`}
+  className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10182A]"
+>
+  <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-amber-200/25 bg-gradient-to-br from-[#49351f]/70 via-[#30251b]/80 to-[#171a27]/95 p-3.5 shadow-lg shadow-black/20 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-amber-200/60 group-hover:shadow-xl group-hover:shadow-amber-950/30 sm:min-h-56 sm:p-5">
 
-                    <div className="flex items-center justify-between">
-                      <span className="flex size-11 items-center justify-center rounded-xl border border-amber-200/20 bg-amber-300/10 text-sm font-black tracking-wider text-amber-200 transition-colors group-hover:bg-amber-300/20">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
+    {/* Decorative accent */}
+    <div
+      aria-hidden="true"
+      className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300/20 via-amber-300/80 to-amber-300/20"
+    />
 
-                      <span className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-slate-400 transition-all duration-300 group-hover:border-amber-200/30 group-hover:bg-amber-300/10 group-hover:text-amber-200">
-                        <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
+    {/* Card heading */}
+    <div className="flex items-center justify-between">
+      <span className="flex size-9 items-center justify-center rounded-xl border border-amber-200/40 bg-amber-300/15 text-xs font-black tracking-wider text-amber-200 shadow-inner sm:size-11 sm:text-sm">
+        {String(index + 1).padStart(2, '0')}
+      </span>
 
-                    <h2 className="mt-6 text-lg font-extrabold leading-snug text-white transition-colors group-hover:text-amber-100">
-                      {topic.title}
-                    </h2>
+      <span className="flex items-center gap-1 rounded-full border border-amber-200/20 bg-black/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-200/80 sm:text-[10px]">
+        <Sparkles className="size-3" />
+        Practice topic
+      </span>
+    </div>
 
-                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-300">
-                      {topic.description}
-                    </p>
+    {/* Topic information */}
+    <div className="mt-3 sm:mt-5">
+      <h2 className="text-base font-extrabold leading-snug text-white transition-colors group-hover:text-amber-200 sm:text-lg">
+        {topic.title}
+      </h2>
 
-                    <div className="mt-auto flex items-center gap-2 pt-6 text-sm font-extrabold text-amber-200">
-                      <Sparkles className="size-4" />
-                      <span>Start practicing</span>
-                      <ArrowRight className="ml-auto size-4 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100" />
-                    </div>
-                  </GlassPanel>
-                </Link>
+      <p className="mt-1.5 line-clamp-3 text-xs leading-5 text-slate-300 sm:mt-2 sm:text-sm sm:leading-6">
+        {topic.description}
+      </p>
+    </div>
+
+    {/* Clear clickable action */}
+    <div className="mt-4 flex items-center justify-between border-t border-amber-100/15 pt-3 sm:mt-auto sm:pt-4">
+      <span className="text-xs font-extrabold text-amber-200 sm:text-sm">
+        Start conversation
+      </span>
+
+      <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-[#30200d] shadow-md transition-transform duration-300 group-hover:translate-x-1 sm:size-9">
+        <ArrowRight className="size-4" />
+      </span>
+    </div>
+  </div>
+</Link>
+
               ))}
             </div>
           </>
