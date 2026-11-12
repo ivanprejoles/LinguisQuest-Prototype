@@ -21,7 +21,7 @@ const VRMViewer = dynamic(
   { ssr: false },
 );
 
-const MAX_MESSAGE_LENGTH = 1200;
+const MAX_MESSAGE_LENGTH = 1000;
 
 // -----------------------------------------------------------------------------
 // Types
@@ -35,6 +35,7 @@ type ConversationTopic = {
   coachingInstructions: string | null;
 };
 
+
 type ConversationRequest = {
   action: "start" | "message";
   languageId: string;
@@ -43,10 +44,18 @@ type ConversationRequest = {
 };
 
 type ConversationResponse = {
+  success: boolean;
   text: string;
   summary: ConversationSummary;
+  memoryUpdated: boolean;
   voiceLanguage: string;
+  hearts: {
+    hearts: number;
+    maxHearts: number;
+    nextRefillAt: string | null;
+  } | null;
 };
+
 
 type SpeechRecognitionAlternativeLike = {
   transcript: string;
@@ -129,6 +138,7 @@ async function fetchTopic(
   return topic as ConversationTopic;
 }
 
+
 async function requestConversation(
   topicId: string,
   request: ConversationRequest,
@@ -156,10 +166,12 @@ async function requestConversation(
   }
 
   if (
-    typeof data?.text !== "string" ||
+    data?.success !== true ||
+    typeof data.text !== "string" ||
     !data.text.trim() ||
     !data.summary ||
-    typeof data.voiceLanguage !== "string"
+    typeof data.voiceLanguage !== "string" ||
+    typeof data.memoryUpdated !== "boolean"
   ) {
     throw new Error("The AI returned an invalid conversation response.");
   }
@@ -569,12 +581,117 @@ export default function ConversationPage() {
   // Send a new learner message
   // ---------------------------------------------------------------------------
 
-  const sendMessage = useCallback(async () => {
-    const message = input.trim();
+  
+const sendMessage = useCallback(async () => {
+  const message = input.trim();
 
+  if (
+    !message ||
+    message.length > MAX_MESSAGE_LENGTH ||
+    !topic ||
+    !languageReady ||
+    requestLockRef.current
+  ) {
+    return;
+  }
+
+  // Prevent another exchange while an earlier one is unresolved.
+  const latestSession =
+    useConversationMemoryStore.getState().sessions[sessionKey];
+
+  const hasUnresolvedMessage = latestSession?.messages.some(
+    (savedMessage) =>
+      savedMessage.role === "user" &&
+      (savedMessage.status === "pending" ||
+        savedMessage.status === "failed" ||
+        savedMessage.status === "retrying"),
+  );
+
+  if (hasUnresolvedMessage) return;
+
+  requestLockRef.current = true;
+
+  stopSpeech();
+  stopAudio();
+
+  setInput("");
+  setError("");
+  setSending(true);
+
+  // Save the learner message before requesting Gemini.
+  const messageId = addPendingUserMessage(sessionKey, message);
+
+  try {
+    // Get the latest session after saving the pending message.
+    const currentSession =
+      useConversationMemoryStore.getState().sessions[sessionKey];
+
+    // Send only the latest message and compact summary.
+    // Conversation history is no longer sent to the API.
+    const result = await sendAIRequest({
+      action: "message",
+      languageId,
+      message,
+      summary: currentSession?.summary ?? null,
+    });
+
+    // Complete the original learner message and merge the AI memory update.
+    completeExchange(
+      sessionKey,
+      messageId,
+      result.text,
+      result.summary,
+    );
+
+    if (mountedRef.current) {
+      void speak(
+        result.text,
+        result.voiceLanguage || voiceLanguage,
+      );
+    }
+  } catch (caught) {
+    // Preserve the original message so the learner can retry it.
+    setMessageStatus(sessionKey, messageId, "failed");
+
+    if (mountedRef.current) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "The tutor couldn't respond. Please try again.",
+      );
+    }
+  } finally {
+    requestLockRef.current = false;
+
+    if (mountedRef.current) {
+      setSending(false);
+    }
+  }
+}, [
+  input,
+  topic,
+  languageReady,
+  languageId,
+  voiceLanguage,
+  sessionKey,
+  sendAIRequest,
+  addPendingUserMessage,
+  setMessageStatus,
+  completeExchange,
+  stopSpeech,
+  stopAudio,
+  speak,
+]);
+
+
+  // ---------------------------------------------------------------------------
+  // Retry the exact same learner message
+  // ---------------------------------------------------------------------------
+
+  
+const retryMessage = useCallback(
+  async (messageId: string) => {
     if (
-      !message ||
-      message.length > MAX_MESSAGE_LENGTH ||
       !topic ||
       !languageReady ||
       requestLockRef.current
@@ -582,46 +699,46 @@ export default function ConversationPage() {
       return;
     }
 
-    // Do not allow another exchange while an earlier one is unresolved.
-    const latestSession =
+    // Retrieve the latest persisted message.
+    const currentSession =
       useConversationMemoryStore.getState().sessions[sessionKey];
 
-    const hasUnresolvedMessage = latestSession?.messages.some(
-      (savedMessage) =>
-        savedMessage.role === "user" &&
-        (savedMessage.status === "pending" ||
-          savedMessage.status === "failed" ||
-          savedMessage.status === "retrying"),
+    const message = currentSession?.messages.find(
+      (savedMessage) => savedMessage.id === messageId,
     );
 
-    if (hasUnresolvedMessage) return;
+    if (
+      !message ||
+      message.role !== "user" ||
+      message.status !== "failed"
+    ) {
+      return;
+    }
 
     requestLockRef.current = true;
 
     stopSpeech();
     stopAudio();
 
-    setInput("");
     setError("");
     setSending(true);
 
-    // Save the learner message BEFORE calling Gemini.
-    // Its ID will be used if we need to retry.
-    const messageId = addPendingUserMessage(sessionKey, message);
+    // Reuse the original message ID.
+    setMessageStatus(sessionKey, messageId, "retrying");
 
     try {
-      const currentSession =
+      const latestSession =
         useConversationMemoryStore.getState().sessions[sessionKey];
 
+      // No conversation history is sent.
       const result = await sendAIRequest({
         action: "message",
         languageId,
-        message,
-        summary: currentSession?.summary ?? null,
+        message: message.content,
+        summary: latestSession?.summary ?? null,
       });
 
-      // Complete the same saved learner message.
-      // This does not add another user message.
+      // Complete the original message exactly once.
       completeExchange(
         sessionKey,
         messageId,
@@ -636,8 +753,7 @@ export default function ConversationPage() {
         );
       }
     } catch (caught) {
-      // Keep the original message in Zustand.
-      // It will appear with a Retry button.
+      // Make the same message available for another retry.
       setMessageStatus(sessionKey, messageId, "failed");
 
       if (mountedRef.current) {
@@ -654,121 +770,22 @@ export default function ConversationPage() {
         setSending(false);
       }
     }
-  }, [
-    input,
+  },
+  [
     topic,
     languageReady,
+    sessionKey,
     languageId,
     voiceLanguage,
-    sessionKey,
     sendAIRequest,
-    addPendingUserMessage,
     setMessageStatus,
     completeExchange,
     stopSpeech,
     stopAudio,
     speak,
-  ]);
+  ],
+);
 
-  // ---------------------------------------------------------------------------
-  // Retry the exact same learner message
-  // ---------------------------------------------------------------------------
-
-  const retryMessage = useCallback(
-    async (messageId: string) => {
-      if (
-        !topic ||
-        !languageReady ||
-        requestLockRef.current
-      ) {
-        return;
-      }
-
-      // Always retrieve the latest persisted message.
-      const currentSession =
-        useConversationMemoryStore.getState().sessions[sessionKey];
-
-      const message = currentSession?.messages.find(
-        (savedMessage) => savedMessage.id === messageId,
-      );
-
-      if (
-        !message ||
-        message.role !== "user" ||
-        message.status !== "failed"
-      ) {
-        return;
-      }
-
-      requestLockRef.current = true;
-
-      stopSpeech();
-      stopAudio();
-
-      setError("");
-      setSending(true);
-
-      // Reuse the original message ID.
-      setMessageStatus(sessionKey, messageId, "retrying");
-
-      try {
-        const latestSession =
-          useConversationMemoryStore.getState().sessions[sessionKey];
-
-        const result = await sendAIRequest({
-          action: "message",
-          languageId,
-          message: message.content,
-          summary: latestSession?.summary ?? null,
-        });
-
-        // Complete the original message exactly once.
-        completeExchange(
-          sessionKey,
-          messageId,
-          result.text,
-          result.summary,
-        );
-
-        if (mountedRef.current) {
-          void speak(
-            result.text,
-            result.voiceLanguage || voiceLanguage,
-          );
-        }
-      } catch (caught) {
-        // Keep the original message and make Retry available again.
-        setMessageStatus(sessionKey, messageId, "failed");
-
-        if (mountedRef.current) {
-          setError(
-            caught instanceof Error
-              ? caught.message
-              : "The tutor couldn't respond. Please try again.",
-          );
-        }
-      } finally {
-        requestLockRef.current = false;
-
-        if (mountedRef.current) {
-          setSending(false);
-        }
-      }
-    },
-    [
-      topic,
-      languageReady,
-      sessionKey,
-      languageId,
-      voiceLanguage,
-      sendAIRequest,
-      setMessageStatus,
-      completeExchange,
-      stopSpeech,
-      stopAudio,
-      speak,
-    ],
-  );
 
   // ---------------------------------------------------------------------------
   // Form submission
