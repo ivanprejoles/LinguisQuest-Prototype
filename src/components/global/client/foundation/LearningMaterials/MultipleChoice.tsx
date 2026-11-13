@@ -154,7 +154,7 @@ export function MultipleChoice({
       {/* Compact Options Grid */}
       <div
         className={`grid w-full gap-2 ${
-          true
+          hasImages
             ? "grid-cols-2 items-stretch"
             : options.length === 3
               ? "grid-cols-1"
@@ -179,7 +179,7 @@ export function MultipleChoice({
                 />
               </div>
 
-              {true ? (
+              {option.imageUrl ? (
                 /* IMAGE OPTION */
                 <button
                   type="button"
@@ -211,7 +211,7 @@ export function MultipleChoice({
                   {/* Image Area */}
                   <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-xl bg-slate-50 p-1.5 sm:h-28">
                     <Image
-                      src={"https://www.citypng.com/public/uploads/preview/fast-food-cartoon-hamburger-cheeseburger-hd-png-704081694862658zngzw8ibst.png"}
+                      src={option.imageUrl}
                       alt={option.text}
                       fill
                       unoptimized
