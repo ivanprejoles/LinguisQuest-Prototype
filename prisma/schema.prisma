@@ -17,8 +17,8 @@ model User {
 
   xp                Int      @default(0)
 
-  hearts            Int      @default(5)
-  maxHearts         Int      @default(5)
+  hearts            Int      @default(10)
+  maxHearts         Int      @default(10)
   lastHeartRefillAt DateTime @default(now()) // Timestamp anchor for 4-hour heart regeneration
 
   stageScores       UserStageScore[]
