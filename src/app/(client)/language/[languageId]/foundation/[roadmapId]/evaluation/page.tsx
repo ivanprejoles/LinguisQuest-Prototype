@@ -289,7 +289,7 @@ export default function EvaluationPage() {
     </div>
 
     {/* Question Card */}
-    <div className="bg-[#fffdf7]/95 backdrop-blur-md border border-white/80 rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.15)]">
+    <div className="bg-transparent rounded-3xl p-5 sm:p-7 ">
       <StageMaterialRenderer
         key={stage.id}
         stage={stage}
