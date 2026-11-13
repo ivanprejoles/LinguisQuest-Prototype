@@ -12,7 +12,6 @@ import {
 
 interface BonusRoundLayoutProps {
   children: React.ReactNode;
-  stageTitle?: string;
 
   isSubmitted: boolean;
   isAnswerCorrect: boolean;
@@ -25,7 +24,6 @@ interface BonusRoundLayoutProps {
 
 export function BonusRoundLayout({
   children,
-  stageTitle,
   isSubmitted,
   isAnswerCorrect,
   isSubmitting,
@@ -73,12 +71,6 @@ export function BonusRoundLayout({
                 A little practice helps your memory grow. Let's see what
                 you remember!
               </p>
-
-              {stageTitle && (
-                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-amber-700">
-                  {stageTitle}
-                </p>
-              )}
             </div>
           </div>
         </div>

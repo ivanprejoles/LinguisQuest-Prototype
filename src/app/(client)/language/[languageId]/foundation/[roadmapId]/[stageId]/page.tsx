@@ -569,7 +569,7 @@ export default function StageLessonPage() {
   if (isBonusRound) {
     return (
       <BonusRoundLayout
-        stageTitle={stage.type}
+        // stageTitle={stage.type}
         isSubmitted={isSubmitted}
         isAnswerCorrect={isCurrentAnswerCorrect}
         isSubmitting={isNavigating}

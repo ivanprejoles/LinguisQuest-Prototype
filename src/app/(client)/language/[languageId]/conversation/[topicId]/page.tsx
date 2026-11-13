@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ConversationSummary } from "@/lib/conversation-summary";
 import { useConversationMemoryStore } from "@/store/conversation/conversation-memory-store";
 import { useLanguageStore } from "@/store/foundation/language-store";
+import { splitTextIntoChunks } from "@/lib/text-split";
 
 const VRMViewer = dynamic(
   () => import("@/components/global/client/conversation/VRMViewer"),
@@ -271,6 +272,7 @@ export default function ConversationPage() {
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voicePlaybackIdRef = useRef(0);
 
   const speechBaseInputRef = useRef("");
 
@@ -386,71 +388,173 @@ export default function ConversationPage() {
     }
   }, []);
 
-  const speak = useCallback(
-    async (text: string, language: string) => {
-      if (!voiceEnabled || !text.trim() || !language) return;
+  // const speak = useCallback(
+  //   async (text: string, language: string) => {
+  //     if (!voiceEnabled || !text.trim() || !language) return;
 
-      lastVoiceRef.current = { text, language };
-      setVoicePlaybackIssue(null);
+  //     lastVoiceRef.current = { text, language };
+  //     setVoicePlaybackIssue(null);
 
-      stopAudio();
+  //     stopAudio();
 
-      const audio = new Audio(
-        `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(language)}`,
-      );
+  //     const audio = new Audio(
+  //       `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(language)}`,
+  //     );
 
-      audioRef.current = audio;
+  //     audioRef.current = audio;
 
-      const finish = () => {
-        if (audioRef.current !== audio) return;
+  //     const finish = () => {
+  //       if (audioRef.current !== audio) return;
 
+  //       audioRef.current = null;
+
+  //       if (mountedRef.current) {
+  //         setTalking(false);
+  //       }
+  //     };
+
+  //     audio.onplay = () => {
+  //       if (mountedRef.current && audioRef.current === audio) {
+  //         setTalking(true);
+  //       }
+  //     };
+
+  //     audio.onended = finish;
+
+  //     audio.onerror = () => {
+  //       if (audioRef.current !== audio) return;
+
+  //       if (mountedRef.current) {
+  //         setVoicePlaybackIssue("unavailable");
+  //       }
+
+  //       finish();
+  //     };
+
+  //     try {
+  //       await audio.play();
+  //     } catch (caught) {
+  //       if (audioRef.current === audio) {
+  //         const autoplayBlocked =
+  //           caught instanceof DOMException &&
+  //           caught.name === "NotAllowedError";
+
+  //         if (mountedRef.current) {
+  //           setVoicePlaybackIssue(
+  //             autoplayBlocked ? "interaction-required" : "unavailable",
+  //           );
+  //         }
+
+  //         finish();
+  //       }
+
+  //       console.warn("[AI Voice] Playback unavailable:", caught);
+  //     }
+  //   },
+  //   [voiceEnabled, stopAudio],
+  // );
+
+const speak = useCallback(
+  async (text: string, language: string) => {
+    if (!voiceEnabled || !text.trim() || !language) return;
+
+    lastVoiceRef.current = { text, language };
+    setVoicePlaybackIssue(null);
+
+    // Stop any previous speech.
+    stopAudio();
+
+    const playbackId = ++voicePlaybackIdRef.current;
+    const chunks = splitTextIntoChunks(text, 180);
+
+    try {
+      for (const chunk of chunks) {
+        // Stop if another response has started.
+        if (playbackId !== voicePlaybackIdRef.current) return;
+
+        const params = new URLSearchParams({
+          text: chunk,
+          lang: language,
+        });
+
+        const audio = new Audio(`/api/tts?${params.toString()}`);
+        audio.preload = "auto";
+
+        audioRef.current = audio;
+
+        const completed = await new Promise<boolean>((resolve, reject) => {
+          let settled = false;
+
+          const finish = (result: boolean) => {
+            if (settled) return;
+            settled = true;
+            resolve(result);
+          };
+
+          audio.onplay = () => {
+            if (mountedRef.current) {
+              setTalking(true);
+            }
+          };
+
+          audio.onended = () => finish(true);
+
+          // A pause means playback was interrupted.
+          audio.onpause = () => {
+            if (!audio.ended) finish(false);
+          };
+
+          audio.onerror = () => {
+            if (settled) return;
+            settled = true;
+            reject(new Error("TTS audio playback failed"));
+          };
+
+          audio.play().catch((error) => {
+            if (settled) return;
+            settled = true;
+            reject(error);
+          });
+        });
+
+        // Don't continue if playback was interrupted.
+        if (
+          !completed ||
+          playbackId !== voicePlaybackIdRef.current ||
+          audioRef.current !== audio
+        ) {
+          return;
+        }
+
+        audioRef.current = null;
+      }
+    } catch (caught) {
+      if (playbackId !== voicePlaybackIdRef.current) return;
+
+      const autoplayBlocked =
+        caught instanceof DOMException &&
+        caught.name === "NotAllowedError";
+
+      if (mountedRef.current) {
+        setVoicePlaybackIssue(
+          autoplayBlocked ? "interaction-required" : "unavailable",
+        );
+      }
+
+      console.warn("[AI Voice] Playback unavailable:", caught);
+    } finally {
+      // Only the latest playback should update the UI.
+      if (playbackId === voicePlaybackIdRef.current) {
         audioRef.current = null;
 
         if (mountedRef.current) {
           setTalking(false);
         }
-      };
-
-      audio.onplay = () => {
-        if (mountedRef.current && audioRef.current === audio) {
-          setTalking(true);
-        }
-      };
-
-      audio.onended = finish;
-
-      audio.onerror = () => {
-        if (audioRef.current !== audio) return;
-
-        if (mountedRef.current) {
-          setVoicePlaybackIssue("unavailable");
-        }
-
-        finish();
-      };
-
-      try {
-        await audio.play();
-      } catch (caught) {
-        if (audioRef.current === audio) {
-          const autoplayBlocked =
-            caught instanceof DOMException &&
-            caught.name === "NotAllowedError";
-
-          if (mountedRef.current) {
-            setVoicePlaybackIssue(
-              autoplayBlocked ? "interaction-required" : "unavailable",
-            );
-          }
-
-          finish();
-        }
-
-        console.warn("[AI Voice] Playback unavailable:", caught);
       }
-    },
-    [voiceEnabled, stopAudio],
-  );
+    }
+  },
+  [voiceEnabled, stopAudio],
+);
 
   const replayMessage = useCallback(
     (text: string) => {
