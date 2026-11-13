@@ -64,16 +64,25 @@ export default function AdminStagesPage({
     mutationFn: async (id: string) => {
       const res = await fetch(
         `/api/admin/foundation/stages?id=${encodeURIComponent(id)}`,
-        { method: "DELETE" },
+        { method: "DELETE" }
       );
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        throw new Error("Failed to delete stage level.");
+        throw new Error(
+          data.error || `Failed to delete stage level. (${res.status})`
+        );
       }
+
+      return data;
     },
+
     onError: (error: Error) => {
+      console.error("Delete Stage Error:", error);
       setActionError(error.message);
     },
+
     onSettled: async () => {
       try {
         await queryClient.invalidateQueries({ queryKey });

@@ -236,37 +236,79 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing Stage ID" },
+        { status: 400 }
+      );
     }
 
-    const stageToDelete = await prisma.stage.findUnique({ where: { id } });
+    // Validate MongoDB ObjectId
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid Stage ID format" },
+        { status: 400 }
+      );
+    }
 
-    if (stageToDelete && stageToDelete.payload) {
-      const payload = stageToDelete.payload as Record<string, any>;
-      const filesToDelete: string[] = [];
+    // 1. Find existing stage
+    const stageToDelete = await prisma.stage.findUnique({
+      where: { id },
+    });
 
-      if (payload.audioFileId) {
-        filesToDelete.push(payload.audioFileId);
-      }
+    if (!stageToDelete) {
+      return NextResponse.json(
+        { error: "Stage not found" },
+        { status: 404 }
+      );
+    }
 
-      if (Array.isArray(payload.options)) {
-        payload.options.forEach((opt: any) => {
-          if (opt.imageFileId) {
-            filesToDelete.push(opt.imageFileId);
-          }
-        });
-      }
+    // 2. Collect associated ImageKit files
+    const payload = stageToDelete.payload as Record<string, any>;
+    const filesToDelete: string[] = [];
 
-      if (filesToDelete.length > 0) {
+    if (payload.audioFileId) {
+      filesToDelete.push(payload.audioFileId);
+    }
+
+    if (Array.isArray(payload.options)) {
+      payload.options.forEach((option: any) => {
+        if (option.imageFileId) {
+          filesToDelete.push(option.imageFileId);
+        }
+      });
+    }
+
+    // 3. Delete database record
+    await prisma.stage.delete({
+      where: { id },
+    });
+
+    // 4. Clean up ImageKit files
+    if (filesToDelete.length > 0) {
+      try {
         await deleteImageKitFiles(filesToDelete);
+      } catch (imageError) {
+        console.error(
+          "ImageKit Cleanup Error:",
+          imageError
+        );
       }
     }
 
-    await prisma.stage.delete({ where: { id } });
+    return NextResponse.json({
+      success: true,
+      message: "Stage successfully deleted.",
+    });
 
-    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE Stage Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        error: error.message || "Internal server error",
+        code: error.code || null,
+      },
+      { status: 500 }
+    );
   }
 }
