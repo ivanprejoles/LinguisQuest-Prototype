@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -21,6 +22,7 @@ const getWordText = (item: unknown): string => {
     const obj = item as Record<string, unknown>;
     return String(obj.word ?? obj.text ?? obj.label ?? "");
   }
+
   return String(item ?? "");
 };
 
@@ -42,6 +44,7 @@ export function SentenceBuilder({
 }: Props) {
   const createTileBank = useCallback((): TileItem[] => {
     const rawBank = payload.scrambledWordBank || [];
+
     return rawBank.map((item, index) => ({
       id: `tile-${index}-${getWordText(item)}`,
       text: getWordText(item),
@@ -51,41 +54,99 @@ export function SentenceBuilder({
   const [selectedTiles, setSelectedTiles] = useState<TileItem[]>([]);
   const [bankTiles, setBankTiles] = useState<TileItem[]>(createTileBank);
 
+  // Reset tiles when the activity changes
   useEffect(() => {
     setSelectedTiles([]);
     setBankTiles(createTileBank());
   }, [payload, createTileBank]);
 
+  // Play pronunciation of an individual word
+  const speakWord = useCallback(
+    (text: string) => {
+      if (!text || !text.trim()) return;
+
+      const serverTtsUrl = `/api/tts?text=${encodeURIComponent(
+        text.trim()
+      )}&lang=${encodeURIComponent(voiceLanguage)}&rate=0.9`;
+
+      const audio = new Audio(serverTtsUrl);
+
+      audio.play().catch(() => {
+        if (
+          typeof window !== "undefined" &&
+          "speechSynthesis" in window
+        ) {
+          window.speechSynthesis.cancel();
+
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = voiceLanguage;
+          utterance.rate = 0.9;
+
+          const voices = window.speechSynthesis.getVoices();
+          const targetLang = voiceLanguage.toLowerCase();
+          const langPrefix = targetLang.split("-")[0];
+
+          const matchedVoice = voices.find(
+            (voice) =>
+              voice.lang.toLowerCase() === targetLang ||
+              voice.lang.toLowerCase().startsWith(langPrefix)
+          );
+
+          if (matchedVoice) {
+            utterance.voice = matchedVoice;
+          }
+
+          window.speechSynthesis.speak(utterance);
+        }
+      });
+    },
+    [voiceLanguage]
+  );
+
+  // Validate the constructed sentence
   const checkAnswer = (currentSelected: TileItem[]) => {
-    const correctTargetStrings = (payload.correctSentenceArray || []).map(getWordText);
+    const correctTargetStrings = (
+      payload.correctSentenceArray || []
+    ).map(getWordText);
 
     const isMatched =
       currentSelected.length === correctTargetStrings.length &&
-      currentSelected.every((tile, idx) => tile.text === correctTargetStrings[idx]);
+      currentSelected.every(
+        (tile, index) => tile.text === correctTargetStrings[index]
+      );
 
     onAnswerChange(isMatched);
   };
 
+  // Select a word and play its pronunciation
   const handleSelect = (tile: TileItem) => {
     if (selectedTiles.some((t) => t.id === tile.id)) return;
 
+    // Play audio when the user taps a word
+    speakWord(tile.text);
+
     const nextSelected = [...selectedTiles, tile];
+
     setSelectedTiles(nextSelected);
     checkAnswer(nextSelected);
   };
 
+  // Remove a selected word
   const handleDeselect = (tileId: string) => {
-    const nextSelected = selectedTiles.filter((t) => t.id !== tileId);
+    const nextSelected = selectedTiles.filter(
+      (tile) => tile.id !== tileId
+    );
+
     setSelectedTiles(nextSelected);
     checkAnswer(nextSelected);
   };
 
+  // Reset the sentence
   const handleReset = () => {
     setSelectedTiles([]);
     onAnswerChange(false);
   };
 
-  
   return (
     <div className="flex flex-col items-center max-w-xl mx-auto w-full gap-3 sm:gap-4 select-none pt-1">
 
@@ -123,6 +184,7 @@ export function SentenceBuilder({
           <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-sky-700 mb-1">
             Listen and build the sentence
           </span>
+
           <h2 className="text-base sm:text-lg font-black text-slate-800 leading-snug">
             {payload.question}
           </h2>
@@ -142,7 +204,10 @@ export function SentenceBuilder({
               type="button"
               onClick={() => handleDeselect(tile.id)}
               className={`px-3 py-2 border-2 border-b-4 rounded-xl font-bold text-sm shadow-sm active:translate-y-1 active:border-b-2 transition-all animate-in zoom-in-95 duration-100 ${
-                tileColors[index % tileColors.length]
+                tileColors[
+                  bankTiles.findIndex((bankTile) => bankTile.id === tile.id) %
+                    tileColors.length
+                ]
               }`}
             >
               {tile.text}
@@ -166,7 +231,9 @@ export function SentenceBuilder({
       {/* Word Tile Bank */}
       <div className="w-full flex flex-wrap gap-2 justify-center pt-0 min-h-0">
         {bankTiles.map((tile, index) => {
-          const isUsed = selectedTiles.some((t) => t.id === tile.id);
+          const isUsed = selectedTiles.some(
+            (selected) => selected.id === tile.id
+          );
 
           return isUsed ? (
             <div
