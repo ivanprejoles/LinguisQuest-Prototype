@@ -427,7 +427,7 @@ export class TracingEngine {
   }
 
   public prepareGlyph(char: string) {
-    const symbol = char.trim() || "A";
+    const symbol = char.trim();
 
     this.validHits = 0;
     this.outOfBoundsHits = 0;
@@ -529,41 +529,53 @@ export class TracingEngine {
   }
 
   private drawStrokeGuide(guide: LetterGuide) {
+    const ctx = this.ctx;
+    const SCALE = 0.9; // 90% of the original guide size
+    const CENTER_X = 140;
+    const CENTER_Y = 140;
+
+    const scalePoint = (point: GuidePoint): GuidePoint => ({
+      x: CENTER_X + (point.x - CENTER_X) * SCALE,
+      y: CENTER_Y + (point.y - CENTER_Y) * SCALE,
+    });
+
     guide.strokes.forEach((stroke, index) => {
-      const points = stroke.path;
+      const points = stroke.path.map(scalePoint);
 
-      if (points.length < 2) return;
+      // Keep your existing guide drawing logic here,
+      // but use `points` instead of `stroke.path`.
 
-      // Draw the guide path.
-      this.ctx.save();
+      // Example:
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([8, 8]);
+      ctx.strokeStyle = "#8bd8e8";
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
-      this.ctx.beginPath();
-      this.ctx.moveTo(points[0].x, points[0].y);
+      points.forEach((point, pointIndex) => {
+        if (pointIndex === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      });
 
-      for (let i = 1; i < points.length; i++) {
-        this.ctx.lineTo(points[i].x, points[i].y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Use the scaled points for your start marker and arrow too.
+      if (points.length > 0) {
+        this.drawStartMarker(points[0], index + 1);
       }
 
-      this.ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
-      this.ctx.lineWidth = 5;
-      this.ctx.lineCap = "round";
-      this.ctx.lineJoin = "round";
-      this.ctx.setLineDash([7, 6]);
-      this.ctx.stroke();
-
-      this.ctx.restore();
-
-      const start = points[0];
-      const end = points[points.length - 1];
-
-      // Draw the starting point and stroke number.
-      this.drawStartMarker(start, index + 1);
-
-      // Draw directional arrow.
-      this.drawArrow(
-        points[points.length - 2],
-        end
-      );
+      if (points.length >= 2) {
+        this.drawArrow(
+          points[points.length - 2],
+          points[points.length - 1]
+        );
+      }
     });
   }
 
