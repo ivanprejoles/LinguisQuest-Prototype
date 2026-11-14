@@ -247,6 +247,7 @@ export async function POST(
           score,
           xpAwarded,
           xp: updatedUser.xp,
+          alreadyCompleted: false,
         };
       }
 
@@ -268,6 +269,7 @@ export async function POST(
         score,
         xpAwarded,
         xp: updatedUser.xp,
+        alreadyCompleted: body.action === "complete",
       };
     });
 
@@ -276,6 +278,7 @@ export async function POST(
       score: result.score,
       xpAwarded: result.xpAwarded,
       xp: result.xp,
+      alreadyCompleted: result.alreadyCompleted,
     });
 
   } catch (error) {

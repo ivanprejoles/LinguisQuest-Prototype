@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, {
   useCallback,
   useEffect,
@@ -44,6 +45,7 @@ import {
 } from "@/store/foundation/srs-store";
 
 import { useUserStore } from "@/store/user/user-store";
+import { StageTransition } from "@/components/global/admin/foundation/StageTransition";
 
 const WRONG_FEEDBACK_DURATION = 1500;
 
@@ -65,6 +67,7 @@ type StageCompletionResponse = {
   score: UserStageScore;
   xpAwarded: number;
   xp: number;
+  alreadyCompleted: boolean;
 };
 
 async function fetchStage(
@@ -182,6 +185,20 @@ export default function StageLessonPage() {
   const wrongFeedbackTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const transitionTo = useCallback(
+    async (url: string) => {
+      setIsTransitioning(true);
+
+      // Allow the cyan transition to finish covering the screen.
+      await new Promise((resolve) => setTimeout(resolve, 550));
+
+      router.push(url);
+    },
+    [router]
+  );
+
   // --------------------------------------------------
   // FETCH CURRENT STAGE
   // --------------------------------------------------
@@ -233,6 +250,7 @@ export default function StageLessonPage() {
     setWrongAttempts(0);
     setIsSubmitted(false);
     setIsCurrentAnswerCorrect(false);
+    setIsTransitioning(false);
 
     // Only prefetch the next stage during normal lessons.
     if (!isBonusRound && nextStageId) {
@@ -299,7 +317,8 @@ export default function StageLessonPage() {
       if (
         !result?.score ||
         typeof result.xp !== "number" ||
-        typeof result.xpAwarded !== "number"
+        typeof result.xpAwarded !== "number" ||
+        typeof result.alreadyCompleted !== "boolean"
       ) {
         throw new Error(
           "The server returned an incomplete stage completion response."
@@ -347,139 +366,157 @@ export default function StageLessonPage() {
   // --------------------------------------------------
 
   const handleNextStage = useCallback(async () => {
-    if (
-      !stage ||
-      !isCurrentAnswerCorrect ||
-      completeStageMutation.isPending
-    ) {
-      return;
-    }
+  if (
+    !stage ||
+    !isCurrentAnswerCorrect ||
+    completeStageMutation.isPending ||
+    isTransitioning
+  ) {
+    return;
+  }
 
-    const durationMs = Math.max(
-      0,
-      Date.now() - (startedAtRef.current ?? Date.now())
-    );
+  const durationMs = Math.max(
+    0,
+    Date.now() - (startedAtRef.current ?? Date.now())
+  );
 
-    try {
-      // ==============================================
-      // BONUS REVIEW COMPLETION
-      // ==============================================
+  try {
+    // ==============================================
+    // BONUS REVIEW COMPLETION
+    // ==============================================
 
-      if (isBonusRound) {
-        const result = await completeStageMutation.mutateAsync({
-          action: "review",
-          durationMs,
-          wrongAttempts,
-        });
-
-        // Update this bonus stage's score and recalculate
-        // its next review schedule.
-        updateScore(result.score);
-
-        // Return to the original roadmap and next stage.
-        if (returnToStageId && returnToRoadmapId) {
-          router.push(
-            `/language/${languageId}/foundation/${returnToRoadmapId}/${returnToStageId}`
-          );
-
-          return;
-        }
-
-        // There was no next normal stage.
-        router.push(`/language/${languageId}/foundation`);
-
-        return;
-      }
-
-      // ==============================================
-      // NORMAL STAGE COMPLETION
-      // ==============================================
-
-      // Ensure all stages across this language's roadmaps
-      // are loaded before checking the review queue.
-      //
-      // Normal completion must still be saved if SRS loading fails.
-      try {
-        await ensureLanguageLoaded(languageId);
-      } catch (srsError) {
-        console.error(
-          "Unable to load language SRS scores:",
-          srsError
-        );
-      }
-
-      // Save the normal stage first.
+    if (isBonusRound) {
       const result = await completeStageMutation.mutateAsync({
-        action: "complete",
+        action: "review",
         durationMs,
         wrongAttempts,
       });
 
-      // Update the completed stage's schedule.
       updateScore(result.score);
 
-      // ==============================================
-      // CHECK FOR ONE DUE BONUS REVIEW
-      // ==============================================
+      toast.success("Review completed!", {
+        description: "Your learning progress has been updated.",
+      });
 
-      const nextBonus = claimDueReview(
-        stage.id,
-        result.score.updatedAt,
-        languageId,
-        Date.now()
+      if (returnToStageId && returnToRoadmapId) {
+        await transitionTo(
+          `/language/${languageId}/foundation/${returnToRoadmapId}/${returnToStageId}`
+        );
+
+        return;
+      }
+
+      await transitionTo(`/language/${languageId}/foundation`);
+
+      return;
+    }
+
+    // ==============================================
+    // NORMAL STAGE COMPLETION
+    // ==============================================
+
+    try {
+      await ensureLanguageLoaded(languageId);
+    } catch (srsError) {
+      console.error(
+        "Unable to load language SRS scores:",
+        srsError
+      );
+    }
+
+    const result = await completeStageMutation.mutateAsync({
+      action: "complete",
+      durationMs,
+      wrongAttempts,
+    });
+
+    // Update the completed stage's SRS score.
+    updateScore(result.score);
+
+    // ==============================================
+    // EXP NOTIFICATION
+    // ==============================================
+
+    if (result.alreadyCompleted) {
+      toast.info("Stage already completed!", {
+        description:
+          "You can replay this stage to practice, but no additional EXP will be awarded.",
+        duration: 3500,
+      });
+    } else {
+      toast.success("Excellent work!", {
+        description: `You earned +${result.xpAwarded} EXP!`,
+        duration: 3500,
+      });
+    }
+
+    // ==============================================
+    // CHECK FOR ONE DUE BONUS REVIEW
+    // ==============================================
+
+    const nextBonus = claimDueReview(
+      stage.id,
+      result.score.updatedAt,
+      languageId,
+      Date.now()
+    );
+
+    if (nextBonus) {
+      const bonusUrl = new URLSearchParams({
+        mode: "bonus",
+        returnToStageId: nextStageId ?? "",
+        returnToRoadmapId: roadmapId,
+      });
+
+      await transitionTo(
+        `/language/${languageId}/foundation/${nextBonus.roadmapId}/${nextBonus.stageId}?${bonusUrl.toString()}`
       );
 
-      if (nextBonus) {
-        const bonusUrl = new URLSearchParams({
-          mode: "bonus",
-          returnToStageId: nextStageId ?? "",
-          returnToRoadmapId: roadmapId,
-        });
-
-        // IMPORTANT:
-        // Use the roadmap and stage from the SRS result.
-        // The bonus stage may belong to another roadmap.
-        router.push(
-          `/language/${languageId}/foundation/${nextBonus.roadmapId}/${nextBonus.stageId}?${bonusUrl.toString()}`
-        );
-
-        return;
-      }
-
-      // ==============================================
-      // NO DUE REVIEW: NORMAL NAVIGATION
-      // ==============================================
-
-      if (hasNextStage && nextStageId) {
-        router.push(
-          `/language/${languageId}/foundation/${roadmapId}/${nextStageId}`
-        );
-
-        return;
-      }
-
-      // Last normal stage reached.
-      router.push(`/language/${languageId}/foundation`);
-    } catch (error) {
-      console.error("Failed to save stage progress:", error);
+      return;
     }
-  }, [
-    stage,
-    isCurrentAnswerCorrect,
-    completeStageMutation,
-    wrongAttempts,
-    isBonusRound,
-    returnToStageId,
-    returnToRoadmapId,
-    updateScore,
-    ensureLanguageLoaded,
-    claimDueReview,
-    languageId,
-    roadmapId,
-    hasNextStage,
-    nextStageId,
-    router,
-  ]);
+
+    // ==============================================
+    // NORMAL NAVIGATION
+    // ==============================================
+
+    if (hasNextStage && nextStageId) {
+      await transitionTo(
+        `/language/${languageId}/foundation/${roadmapId}/${nextStageId}`
+      );
+
+      return;
+    }
+
+    // Last normal stage reached.
+    await transitionTo(`/language/${languageId}/foundation`);
+  } catch (error) {
+    console.error("Failed to save stage progress:", error);
+
+    toast.error("Unable to continue", {
+      description:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while saving your progress.",
+    });
+  }
+}, [
+  stage,
+  isCurrentAnswerCorrect,
+  completeStageMutation,
+  isTransitioning,
+  wrongAttempts,
+  isBonusRound,
+  returnToStageId,
+  returnToRoadmapId,
+  updateScore,
+  ensureLanguageLoaded,
+  claimDueReview,
+  languageId,
+  roadmapId,
+  hasNextStage,
+  nextStageId,
+  transitionTo,
+]);
 
   // --------------------------------------------------
   // EXIT
@@ -550,7 +587,8 @@ export default function StageLessonPage() {
   // SHARED VALUES
   // --------------------------------------------------
 
-  const isNavigating = completeStageMutation.isPending;
+  const isNavigating =
+  completeStageMutation.isPending || isTransitioning;
 
   const stageNumber = Math.min(
     totalStages || stage.order + 1,
@@ -566,24 +604,27 @@ export default function StageLessonPage() {
   // BONUS ROUND LAYOUT
   // --------------------------------------------------
 
-  if (isBonusRound) {
-    return (
-      <BonusRoundLayout
-        // stageTitle={stage.type}
-        isSubmitted={isSubmitted}
-        isAnswerCorrect={isCurrentAnswerCorrect}
-        isSubmitting={isNavigating}
-        onCheckAnswer={handleCheckAnswer}
-        onContinue={handleNextStage}
-        onExit={handleExit}
-      >
-        <StageMaterialRenderer
-          stage={stage}
-          onAnswerChange={setIsCurrentAnswerCorrect}
-        />
-      </BonusRoundLayout>
-    );
-  }
+    if (isBonusRound) {
+      return (
+        <>
+          <BonusRoundLayout
+            isSubmitted={isSubmitted}
+            isAnswerCorrect={isCurrentAnswerCorrect}
+            isSubmitting={isNavigating}
+            onCheckAnswer={handleCheckAnswer}
+            onContinue={handleNextStage}
+            onExit={handleExit}
+          >
+            <StageMaterialRenderer
+              stage={stage}
+              onAnswerChange={setIsCurrentAnswerCorrect}
+            />
+          </BonusRoundLayout>
+
+          <StageTransition active={isTransitioning} />
+        </>
+      );
+    }
 
   // --------------------------------------------------
   // NORMAL STAGE LAYOUT
@@ -756,6 +797,8 @@ export default function StageLessonPage() {
           }
         }
       `}</style>
+
+      <StageTransition active={isTransitioning} />
     </div>
   );
 }
