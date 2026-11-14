@@ -186,10 +186,8 @@ Kk: {
   },
 };
 
-export function getLetterGuide(target: string): LetterGuide[] {
-  return target
-    .trim()
-    .split("")
-    .map((letter) => letterGuides[letter])
-    .filter((guide): guide is LetterGuide => Boolean(guide));
+export function getLetterGuide(letter: string): LetterGuide | undefined {
+  const target = letter.trim();
+
+  return letterGuides[target];
 }
