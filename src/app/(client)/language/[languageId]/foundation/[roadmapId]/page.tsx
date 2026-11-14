@@ -698,7 +698,7 @@ export default function RoadmapStagesPage() {
                   <button
                     type="button"
                     onClick={(event) => {
-                      if (isCurrent) {
+                      if (isCompleted || isCurrent) {
                         handleStartStage(
                           stage,
                           event.currentTarget,
@@ -706,10 +706,10 @@ export default function RoadmapStagesPage() {
                         );
                       }
                     }}
-                    disabled={!isCurrent || !!transition}
+                    disabled={isLocked || !!transition}
                     aria-label={
                       isCompleted
-                        ? `Stage ${index + 1} completed`
+                        ? `Replay completed stage ${index + 1}`
                         : isLocked
                           ? `Stage ${index + 1} locked`
                           : `Start stage ${index + 1}`
@@ -767,7 +767,7 @@ export default function RoadmapStagesPage() {
                     }`}
                   >
                     {isCompleted
-                      ? "Completed!"
+                      ? "Completed · Replay"
                       : isLocked
                         ? "Keep going!"
                         : "Begin your quest"}
